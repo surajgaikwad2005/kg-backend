@@ -1,0 +1,281 @@
+{
+  "domain": "symbolic-ai",
+  "lastUpdated": "2026-08-07",
+  "backend": {
+    "logicalName": "SYMBOLIC_AI",
+    "envVar": "SERVICE_SYMBOLIC_AI_URL",
+    "envVarValue": "bare host only, e.g. http://172.16.0.12 (no path)",
+    "gatewayPrefix": "/api/decisionops-pod2/p1/symbolicAi",
+    "resolvedBaseUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi",
+    "backendPathsEntry": "src/app/api/_lib/backends.js -> BACKEND_PATHS.SYMBOLIC_AI",
+    "swaggerUrl": "http://172.16.0.12/api/decisionops-pod2/swagger",
+    "swaggerTag": "Symbolic-AI Overview",
+    "responseEnvelope": "{ success: boolean, message: string, data: object|null }",
+    "authHeadersDocumented": ["access_token", "refresh_token"],
+    "authHeadersActuallySent": "Authorization: Bearer <token> AND Cookie: access_token=<token> (see CLAUDE.md API rule 3) — injected globally, never per-route",
+    "notes": [
+      "Real path prefix is slash-separated 3-segment '/p1/symbolicAi/<leaf>', NOT '/p1_symbolicAi/<leaf>' (underscore) — the operationId decode from the Swagger deep-link is ambiguous between the two; only the literal pasted URLs confirmed which one is real.",
+      "Each proxy route's own `path:` is just the leaf operation name (e.g. '/setColumns'); the '/api/decisionops-pod2/p1/symbolicAi' prefix lives centrally in backends.js BACKEND_PATHS, not in individual route files or .env*.",
+      "plant_code_id field placement is NOT uniform across endpoints — verify per-endpoint, don't assume. See each endpoint's `plantCodeId.placement` below.",
+      "On multipart (FormData) endpoints, EVERY scalar field is a query-param candidate until proven otherwise — only actual file(s) belong in the multipart body. Confirmed to differ even between the two multipart endpoints in this same domain (see generateMarkdown vs addEquipmentColumn).",
+      "2026-07-21: found (and fixed) BACKEND_PATHS.SYMBOLIC_AI in src/app/api/_lib/backends.js resolving to the bare '/api/p1/symbolicAi' (missing the 'decisionops-pod2' gateway segment) instead of the correct '/api/decisionops-pod2/p1/symbolicAi' — the correct value had been left commented out directly above the wrong active line. This 404'd every endpoint in the domain regardless of request-shape correctness; now fixed to match every fullUrl below.",
+      "2026-08-07: shifted SERVICE_SYMBOLIC_AI_URL in .env.local from local dev (http://127.0.0.1:8000) to deployed (http://172.16.0.12) — confirmed live against http://172.16.0.12/api/decisionops-pod2/openapi.json. The gateway `servers` entry in that spec is literally '/api/decisionops-pod2', and every symbolicAi path in it (addData, addEquipmentColumn, deleteData, deleteTable, findSymbolicAi, generateMarkdown, listTables, removeColumns, setColumns, updateDynamic) is under '/p1/symbolicAi/<leaf>' — so BACKEND_PATHS.SYMBOLIC_AI ('/api/decisionops-pod2/p1/symbolicAi') needed no change, it was already correct. BUT the live spec also caught a real drift: the chat endpoint's true path is '/findSymbolicAi' (correct spelling, with the 'c'), not '/findSymboliAi' as this file previously documented and as src/app/api/symbolic-ai/chat/route.js had hardcoded — that typo would have 404'd on the deployed backend even though it may have worked against whatever local backend build originally produced the missing-'c' evidence. Fixed the route's `path:` and this file's endpoint name/fullUrl/description to 'findSymbolicAi'. Every other route file's `path:` was individually diffed against the live spec and matches exactly."
+    ]
+  },
+  "serviceFile": "src/services/symbolic-ai/symbolicAiService.js",
+  "proxyRoutesDir": "src/app/api/symbolic-ai/",
+  "endpoints": [
+    {
+      "name": "setColumns",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/setColumns",
+      "localProxyRoute": "/api/symbolic-ai/set-columns",
+      "proxyRouteFile": "src/app/api/symbolic-ai/set-columns/route.js",
+      "serviceFunction": "setColumns({ dashboard_name, columns }, clientCode)",
+      "description": "Create/update dynamic table columns in symbolic_ai database.",
+      "contentType": "application/json",
+      "requestBody": { "dashboard_name": "test5", "columns": ["col1", "col2", "col3"], "plant_code_id": "string" },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Columns updated successfully",
+        "data": { "addedColumns": ["col3", "col4"], "totalAdded": 2 }
+      },
+      "note": "2026-07-21 pasted sample's request body has NO table/dashboard_name field at all (just columns + plant_code_id), and the response no longer includes tableName either — matches the request-body change. Service still sends dashboard_name in the body (kept as a safe default: harmless extra field if the backend ignores it, but risky to strip without confirming the backend doesn't need it to know which table's columns to touch) — flagged to the user, not changed pending confirmation."
+    },
+    {
+      "name": "removeColumns",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/removeColumns",
+      "localProxyRoute": "/api/symbolic-ai/remove-columns",
+      "proxyRouteFile": "src/app/api/symbolic-ai/remove-columns/route.js",
+      "serviceFunction": "removeColumns({ dashboard_name, columns }, clientCode)",
+      "description": "Remove columns dynamically from symbolic_ai table.",
+      "contentType": "application/json",
+      "requestBody": { "dashboard_name": "test5", "columns": ["col2"], "plant_code_id": "string" },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Columns removed successfully",
+        "data": { "removedColumns": ["col3", "col4"], "notFoundColumns": [] }
+      },
+      "notes": "Same table/dashboard_name-omission note as setColumns (2026-07-21 sample) applies here."
+    },
+    {
+      "name": "addData",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/addData",
+      "localProxyRoute": "/api/symbolic-ai/add-data",
+      "proxyRouteFile": "src/app/api/symbolic-ai/add-data/route.js",
+      "serviceFunction": "addData({ dashboard_name, rows }, clientCode)",
+      "description": "Insert multiple rows into dynamic symbolic_ai table.",
+      "contentType": "application/json",
+      "requestBody": {
+        "dashboard_name": "test5",
+        "rows": [
+          { "col1": "df", "col2": "dfgdfg", "col3": "fsdfs" },
+          { "col1": "sdf", "col2": "dg", "col3": "hfgd" },
+          { "col1": "sdaf", "col2": "afdaw", "col3": "safd" }
+        ],
+        "plant_code_id": "string"
+      },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Data inserted successfully",
+        "data": { "rowsAdded": 2 }
+      }
+    },
+    {
+      "name": "deleteData",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/deleteData",
+      "localProxyRoute": "/api/symbolic-ai/delete-data",
+      "proxyRouteFile": "src/app/api/symbolic-ai/delete-data/route.js",
+      "serviceFunction": "deleteData({ dashboard_name, filters }, clientCode)",
+      "description": "Delete rows from table using filter conditions.",
+      "contentType": "application/json",
+      "requestBody": { "dashboard_name": "test5", "filters": { "col1": "df" }, "plant_code_id": "string" },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Data deleted successfully",
+        "data": { "rowsDeleted": 1 }
+      }
+    },
+    {
+      "name": "deleteTable",
+      "method": "DELETE",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/deleteTable",
+      "localProxyRoute": "/api/symbolic-ai/delete-table",
+      "proxyRouteFile": "src/app/api/symbolic-ai/delete-table/route.js",
+      "serviceFunction": "deleteTable(dashboardName, plantCode)",
+      "description": "Delete a symbolic_ai database table.",
+      "contentType": "application/json",
+      "requestBody": { "dashboard_name": "test" },
+      "requestParams": { "plant_code_id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": "per direct user instruction, 2026-07-22", "note": "The only symbolic-ai endpoint where plant_code_id goes in the query string rather than the body — 2026-07-21's sample omitted it from the request body sample entirely; per Rule 0 it's still always sent, just moved to query on explicit user instruction." },
+      "responseBody": {
+        "success": true,
+        "message": "Dashboard deleted successfully",
+        "data": { "dashboardName": "test23", "rowsDeleted": 14 }
+      }
+    },
+    {
+      "name": "listTables",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/listTables",
+      "localProxyRoute": "/api/symbolic-ai/list-tables",
+      "proxyRouteFile": "src/app/api/symbolic-ai/list-tables/route.js",
+      "serviceFunction": "listTables(clientCode)",
+      "description": "List all tables available in symbolic_ai database.",
+      "contentType": null,
+      "requestBody": null,
+      "requestParams": { "plant_code_id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": true, "note": "2026-07-21 sample confirms 'plant_code_id as query and access_token by cookies' in the doc's own words. Value is only sent when useApp().plantCode is truthy — if no plant is selected in the UI, this param is omitted entirely and the backend will 422." },
+      "responseBody": {
+        "success": true,
+        "message": "dashboards retrieved successfully",
+        "data": { "dashboardNames": ["new1", "test2", "test23", "test3", "test4", "test6"] }
+      },
+      "note": "Response field renamed 'tables' -> 'dashboardNames' as of the 2026-07-21 sample. Frontend consumer (src/app/(dashboard)/symbolic-ai/page.jsx fetchTables()) already reads res.data?.dashboardNames — no code change needed, it was already ahead of this doc."
+    },
+    {
+      "name": "updateDynamic",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/updateDynamic",
+      "localProxyRoute": "/api/symbolic-ai/update-dynamic",
+      "proxyRouteFile": "src/app/api/symbolic-ai/update-dynamic/route.js",
+      "serviceFunction": "updateDynamic({ dashboard_name, filters, update_column, update_value }, clientCode)",
+      "description": "Dynamically update one or multiple columns using filters.",
+      "contentType": "application/json",
+      "requestBody": {
+        "dashboard_name": "test5",
+        "filters": { "col1": "sdf" },
+        "update_column": "col1",
+        "update_value": "sdf12",
+        "plant_code_id": "string"
+      },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Data updated successfully",
+        "data": { "dashboardName": "test4", "rowsUpdated": 1, "updatedColumns": ["c4"] }
+      },
+      "note": "Response field renamed 'tableName' -> 'dashboardName' as of the 2026-07-21 sample. Not consumed by any caller (useSymbolicAIPage.js's forgeUpdateNode/handleRenameNode only check for a thrown error) — no code change needed."
+    },
+    {
+      "name": "generateMarkdown",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/generateMarkdown",
+      "localProxyRoute": "/api/symbolic-ai/generate-markdown",
+      "proxyRouteFile": "src/app/api/symbolic-ai/generate-markdown/route.js",
+      "note_2026-07-22": "This single backend endpoint serves TWO distinct frontend flows, confirmed by the user: (1) INSERT — upload a file, ingest it into a table; (2) FETCH — no file, just regenerate markdown from an existing table's current DB data. These are now split into two separate service functions below (generateMarkdown = INSERT, fetchMarkdown = FETCH) instead of one multipart-only function that faked a 'no file' case with an empty Blob — this backend rejects an empty Blob outright rather than treating it as 'no file, use DB data'.",
+      "insertFlow": {
+        "serviceFunction": "generateMarkdown(formData, plantCode)",
+        "description": "Upload PDF/CSV/Excel and generate hierarchical markdown/markmap output for it.",
+        "contentType": "multipart/form-data",
+        "callSite": "src/app/(dashboard)/symbolic-ai/_components/EquipmentConfigModal.jsx handleInject() — always has a real file (a generated CSV Blob).",
+        "swaggerConfirmed_2026-07-09": {
+          "parameters": [
+            { "name": "plant_code_id", "in": "query", "type": "string", "required": true, "note": "SUPERSEDED 2026-07-22 — see plantCodeId below. Real placement is body." }
+          ],
+          "requestBody": {
+            "contentType": "multipart/form-data",
+            "fields": [
+              { "name": "file", "type": "string (binary upload)" },
+              { "name": "table_name_form", "type": "string", "note": "SUPERSEDED 2026-07-22 — see fieldName below. Real field is dashboard_name, not table_name_form." }
+            ]
+          }
+        },
+        "fieldName": { "confirmed": "dashboard_name (not table_name_form)", "evidence": "2026-07-22 custom 400 `{errors:[{field:'dashboard_name', message:'Dashboard Name is required.'}]}` on the user's local backend, naming the field literally.", "placement": "body (multipart form field) only, per direct user instruction 2026-07-22" },
+        "plantCodeId": { "placement": "body (multipart form field) only", "confirmed": "per direct user instruction, 2026-07-22", "history": "Bounced between Swagger-documented query-only, both query+body, before a live network capture (screenshot) showed a 400 with plant_code_id still in query params — user then gave a direct final instruction: body only. Query-param sending removed from both generateMarkdown and addEquipmentColumn." },
+        "fileRequirement": { "confirmed": true, "finding": "`file` is a genuinely required multipart part for this flow — always has a real file at its only call site now, so no empty-Blob workaround is needed anymore." },
+        "responseBody": {
+          "success": true,
+          "message": "Markdown generated successfully",
+          "data": { "tableName": "test44", "markdown": "---\ntitle: test44\nmarkmap:\n  initialExpandLevel: 1\n---\n... (hierarchical markmap markdown, see full sample in original doc) ..." }
+        },
+        "status": "UNVERIFIED with a live success response — field names/placement confirmed by failing-request error messages and direct user instruction, but no successful 200 seen yet for this flow specifically."
+      },
+      "fetchFlow": {
+        "serviceFunction": "fetchMarkdown(dashboardName, plantCode)",
+        "description": "No file — (re)generate markdown from an EXISTING table's current DB data.",
+        "contentType": "application/json",
+        "callSites": [
+          "src/app/(dashboard)/symbolic-ai/[slug]/_hooks/useSymbolicAIPage.js loadRule()",
+          "src/app/(dashboard)/symbolic-ai/[slug]/_hooks/useSymbolicAIPage.js handleDeleteNode()"
+        ],
+        "requestBody": { "plant_code_id": "cdm", "dashboard_name": "test1" },
+        "confirmed": true,
+        "evidence": "2026-07-22, given directly by the user as the correct plain-JSON shape for this flow, after the empty-Blob-multipart workaround was proven wrong by a live 400 {errors:[{field:'file', message:'File is required.'}]}.",
+        "responseBody": {
+          "success": true,
+          "message": "Markdown generated successfully",
+          "data": { "tableName": "test1", "markdown": "..." }
+        },
+        "status": "Field names/placement confirmed by the user; not yet independently re-verified with a captured live success response in this file."
+      }
+    },
+    {
+      "name": "findSymbolicAi",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/findSymbolicAi",
+      "localProxyRoute": "/api/symbolic-ai/chat",
+      "proxyRouteFile": "src/app/api/symbolic-ai/chat/route.js",
+      "serviceFunction": "sendChat({ user_query, dashboard_name }, clientCode)",
+      "description": "Search symbolic_ai tables using chatbot semantic search and generate markdown output.",
+      "contentType": "application/json",
+      "requestBody": { "user_query": "High Suction temperature", "dashboard_name": "test44", "plant_code_id": "string" },
+      "plantCodeId": { "placement": "body", "confirmed": false, "note": "JSON endpoint, matches the doc sample; not individually re-tested with a live 4xx since the gateway-prefix fix." },
+      "responseBody": {
+        "success": true,
+        "message": "Data retrieved and markdown generated successfully",
+        "data": {
+          "tableName": "test44",
+          "query": "High Suction temperature",
+          "searchQuery": "High suction temperature",
+          "total": 9,
+          "markdown": "---\ntitle: test44\n... (same hierarchical markmap markdown shape as generateMarkdown) ..."
+        }
+      },
+      "breakingChangeNote": "Backend used to return raw text/plain markdown for this endpoint (pre-refactor); now returns this JSON envelope. Frontend (AiveeChat.jsx, symbolicAiService.sendChat) already migrated off apiClient.raw()/res.text() to normal JSON parsing."
+    },
+    {
+      "name": "addEquipmentColumn",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/symbolicAi/addEquipmentColumn",
+      "localProxyRoute": "/api/symbolic-ai/add-equipment-column",
+      "proxyRouteFile": "src/app/api/symbolic-ai/add-equipment-column/route.js",
+      "serviceFunction": "addEquipmentColumn(formData, plantCode)",
+      "description": "Processes an uploaded file (with a table name) and returns normalized rows/columns/dropdowns for the Equipment Config step.",
+      "contentType": "multipart/form-data",
+      "requestBodyDocPlain": "upload the file & table name only (doc gives no literal schema for this endpoint — prose only)",
+      "requestFields": { "dashboard_name": "string — FORM FIELD (in the multipart body); sent as-is, no client-side renaming", "plant_code_id": "string — FORM FIELD (in the multipart body)", "file": "File — FORM FIELD" },
+      "plantCodeId": { "placement": "body (multipart form field) only", "confirmed": "per direct user instruction, 2026-07-22", "history": "Bounced between query-only, body-only, and both-at-once across several rounds of live 4xx testing (see the fix notes below) before the user gave a direct final instruction: body only. Query-param sending removed." },
+      "tableName": { "placement": "body (multipart form field)", "fieldName": "dashboard_name", "confirmed": true, "evidence": "2026-07-22, live against the user's LOCAL backend: custom 422 {field:'dashboard_name', message:'Field required'} — field name is dashboard_name, not table_name. This REVERSES the 2026-07-09 evidence below (which was for table_name); the app-wide table_name→dashboard_name rename DOES apply to this endpoint after all, at least on this backend build. symbolicAiService.js no longer renames anything client-side — every function takes/sends dashboard_name directly.", "priorEvidence_2026-07-09": "422 {loc:['body','table_name'], msg:'Field required'} when moved to a query param (mirroring generateMarkdown); reverted back to a table_name form field at the time — now superseded." },
+      "responseBody": {
+        "success": true,
+        "message": "Equipment column processed successfully",
+        "data": {
+          "tableName": "test34",
+          "columns": ["Equipment Id", "Issue", "Parameter", "Cause", "Check"],
+          "rows": "[ ... array of row objects keyed by the columns above, see original doc for the full 14-row sample ... ]",
+          "dropdowns": {
+            "Equipment Id": ["CP-CC-0001", "CP-CM-0001", "CP-CO-0001", "CP-CR-0001", "CP-KN-0001", "CP-PH-0001", "CP-RM-0001", "Export Compressor", "Gas Turbine", "Gearbox", "Reinjection Compressor", "U-102", "U-1300", "U-2300", "U-3300", "U-807", "U-907"]
+          }
+        }
+      },
+      "note": "IMPORTANT: this endpoint and generateMarkdown share similar doc wording and the same multipart shape, YET their dashboard_name placement/field-name history differs. Do not assume the two multipart endpoints share a contract just because their docs look similar.",
+      "2026-07-21fix": "symbolicAiService.js's addEquipmentColumn had drifted to sending `dashboard_name` (renamed from table_name) + `plant_code_id` as a form field — contradicting this section's own confirmed 422 evidence at the time (table_name literal field name, plant_code_id as a query param) and CLAUDE.md's own Rule 0 section. Reverted to table_name form field + plant_code_id query param, matching that evidence. SUPERSEDED one day later — see 2026-07-22fix below.",
+      "2026-07-22fix": "Live re-test against the user's local backend (SERVICE_SYMBOLIC_AI_URL=http://127.0.0.1:8000) got a fresh 422 reversing both placements from the 2026-07-21 fix: field name must be `dashboard_name` (not `table_name`), and `plant_code_id` was still 'required' despite being sent as a query param. Reverted symbolicAiService.js back to renaming table_name->dashboard_name, and sent plant_code_id as BOTH a query param and a form field pending confirmation (the error shape has no `loc`, so exact placement wasn't provable from it alone).",
+      "2026-07-22fix-final": "Per direct user instruction: send plant_code_id in the request body only. symbolicAiService.js now appends plant_code_id as a plain form field on `formData` and posts `formData` directly (previously a broken experimental edit spread FormData into a plain object and hardcoded plant_code_id, which silently dropped the file/dashboard_name and sent no multipart body at all — fixed). Query-param placement removed.",
+      "plantCodeId": { "placement": "body (multipart form field) only", "confirmed": "per direct user instruction, 2026-07-22", "supersedes": "the query+body dual-send from 2026-07-22fix above" }
+    }
+  ],
+  "deletedObsoleteRoutes": [
+    "src/app/api/generate-markdown-table/route.js (was already orphaned/unused before this refactor)",
+    "src/app/api/generate-markdown/route.js (DOMAIN_CONFIGURATION backend — superseded by generate-markdown above)",
+    "src/app/api/generate-symbolicai/route.js (SYMBOLIC_AI backend, old /generate-symbolicai leaf — superseded by generate-markdown above)"
+  ]
+}

@@ -1,0 +1,158 @@
+{
+  "domain": "cdm-connectors-state",
+  "parentDomain": "domain-configuration (CDM)",
+  "backend": "DOMAIN_CONFIGURATION",
+  "backendBasePath": "/p0/cdm",
+  "gatewayHost": "http://127.0.0.1:8000",
+  "swagger": "http://127.0.0.1:8000/docs#/",
+  "siblingFile": "api-data/cdm-flow-state.json — GET /p0/cdm/flow/state, the per-FILE list this endpoint is a rollup of, plus the per-file row/reset/delete endpoints added 2026-08-18. The two are designed to be consumed together (rollup drives tab status/counts; file list drives file names, duplicate detection and the per-file grid).",
+  "auth": {
+    "scheme": "cookie + bearer (dual)",
+    "cookies": [
+      "access_token",
+      "refresh_token"
+    ],
+    "note": "Handled globally by src/proxy.js + src/app/api/_lib/proxy.js. Never add auth headers per-route."
+  },
+  "notes": [
+    "2026-08-13: First real endpoint delivered against the ConnectorState entity proposed in docs/domain-configuration-backend-requirements.md §4.1, and the discovery shape proposed in §6.3 (`GET /connectors/{connector}/state?plant_code_id=…`). The real endpoint improves on that proposal — it is NOT per-connector; one call returns ALL connectors for the plant in `data.connectors[]`.",
+    "2026-08-17 FULLY CONFIRMED via an untruncated live response for plant Plant_1 plus the Swagger UI. All SEVEN connectors confirmed BY NAME and in this order: pnid, documents, timeseries, sap, aif, gloc, lopc (`total: 7`). This supersedes the earlier note where the last four were elided as '… 4 more' and only inferred.",
+    "2026-08-17 SEMANTICS CHANGE (breaking for any status-string consumer): `status` RE-OPENS to UPLOADED while ANY file is unprocessed. PROVEN by the Plant_1 response: the `documents` connector reads `status: \"UPLOADED\"` while simultaneously carrying non-null `validated_at` AND `committed_at` — it IS committed, it just has 1 pending file. So `status` alone can never answer 'has this connector ever been committed?'. Use the lifecycle timestamps (monotonic, they do not re-open) for stage questions and `status` only for 'what is it waiting on right now'. The frontend does exactly this — see deriveConnectorLifecycle in src/components/admin/connectorState.js.",
+    "2026-08-17 GOTCHA: `processed_at` can be NULL on a connector that is nonetheless committed AND has every file processed. Plant_1's `sap`: `processed_at: null`, `committed_at: \"2026-07-13 09:20:48\"`, `counts.processed: 23`, `files_total: 23`. So `processed_at` is NOT a reliable 'has been processed' signal on its own — treat committed as implying processed, and prefer `counts` for anything file-shaped. Same row also has `last_upload_batch_id: null` and `last_run_id: null` despite 23 files, so those two are not safe to assume present either.",
+    "2026-08-17: `unprocessed_file_count` EXCLUDES failed files — it tracks pending only. Plant_1's `documents`: files_total 11 = pending 1 + processed 3 + failed 7, and `unprocessed_file_count: 1`. Anything wanting to surface failures must read `counts.failed` / `has_failures` (true on that row) separately; they will never show up in the unprocessed count.",
+    "2026-08-17: `include_groups` confirmed in the Swagger UI as an optional `boolean (query)` described 'Also return the taxonomy rollup', default `false`. The app deliberately does not send it — the per-file detail it needs comes from flow/state instead.",
+    "Swagger operationId `listConnectorStates_p0_cdm_connectors_state_get`; the literal path shown above the operation is `/p0/cdm/connectors/state` — read directly from the Swagger UI, not decoded from the operationId (which is ambiguous about slash boundaries; see CLAUDE.md's intake protocol).",
+    "`groups[]` (only present when include_groups=true) is still only confirmed for the `pnid` connector's 1-level shape (pnid/pfd/line_list/others) from the 2026-08-13 sample. `documents` (expected 2-level: type→subtype) and `sap` (expected 2-level: pipeline_group→table) group shapes remain UNCONFIRMED. Note flow/state's per-file `category` field makes groups[] unnecessary for most UI needs — the app derives from the file list instead.",
+    "`status` enum: NOT_CONFIGURED, UPLOADED and COMMITTED are now confirmed from live samples. PROCESSED / VALIDATED / FAILED are still inferred from the same-named timestamp fields and have NOT been seen as literal status strings. Backend casing is UPPER_SNAKE; the frontend's SOURCE_STATUS constants (src/components/admin/domainSources.js) are lowercase — but no string mapping was needed in the end, since the app derives stage from timestamps + counts.",
+    "`flow` vs `flows`: `flow` is the connector's primary flow; `flows[]` is every flow it owns. ALL SEVEN confirmed live on Plant_1 — pnid→['pnid'], documents→['docs'], timeseries→['ts','ts_values'], sap→['sap'], aif→['aif'], gloc→['gloc'], lopc→['lopc']. Only `documents` (→'docs') and `timeseries` (two flows) differ from their connector name. This is the join key to flow/state's `flow` query param; the frontend map is FLOWS_BY_SOURCE_TYPE in src/components/admin/connectorState.js.",
+    "Unclear whether a `?connector=` filter query param exists to fetch a single connector's state. Swagger shows only plant_code_id + include_groups, so probably not — the endpoint always returns all seven.",
+    "2026-08-18: the per-connector endpoint GET /p0/cdm/connectors/{connector}/state is CONFIRMED and now wired — it takes the connector in the PATH (not a ?connector= query param, which does not exist), and it is the only way to get include_groups for a single connector. This resolves the old open issue about filtering. It has ALWAYS validated its connector name and 422s on an unknown one — which is why it and /flow/state used to behave in opposite ways, /flow/state having silently returned an empty list for a bad `flow` until the 2026-08-18 release made it validate too.",
+    "2026-08-18: `data.status` on the per-connector endpoint is a THIRD vocabulary — UPPERCASE connector states (NOT_CONFIGURED | UPLOADED | PROCESSING | PROCESSED | IN_REVIEW | VALIDATED | COMMITTED | FAILED), which is neither the /flow/state `lifecycle` filter nor a file row's own `status`. It is the highest-rank state across every file under the connector. IN_REVIEW and PROCESSING are newly named here; the earlier note listing the enum omitted both."
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/p0/cdm/connectors/state",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/connectors/state (deployed) / http://127.0.0.1:8000/p0/cdm/connectors/state (local dev)",
+      "description": "Lifecycle state for every connector of a plant — one rollup per connector: status, the seven standard file counts, unprocessed-file accounting, and lifecycle timestamps. Derived server-side from flow_state, so it cannot disagree with the files it summarises.",
+      "requestParams": {
+        "plant_code_id": {
+          "placement": "query",
+          "confirmed": true
+        },
+        "include_groups": {
+          "placement": "query",
+          "confirmed": true,
+          "optional": true,
+          "default": false,
+          "note": "Omitted in the 2026-08-17 live call and no groups key came back — hence default false."
+        }
+      },
+      "responseShape": {
+        "success": "boolean",
+        "message": "string",
+        "data": {
+          "plant_code_id": "string",
+          "connectors": [
+            {
+              "plant_code_id": "string",
+              "connector": "string — 'pnid' | 'documents' | 'timeseries' confirmed; sap|aif|gloc|lopc expected (the elided '… 4 more')",
+              "flow": "string — primary flow name; join key to flow/state's `flow` param",
+              "flows": "string[] — every flow this connector owns, e.g. timeseries → ['ts','ts_values']",
+              "status": "string — NOT_CONFIGURED | UPLOADED confirmed. RE-OPENS to UPLOADED when any file is unprocessed (see notes)",
+              "counts": {
+                "files_total": "number",
+                "pending": "number",
+                "processing": "number",
+                "processed": "number",
+                "failed": "number",
+                "skipped": "number",
+                "superseded": "number"
+              },
+              "has_unprocessed_files": "boolean",
+              "unprocessed_file_count": "number",
+              "total_file_count": "number",
+              "has_failures": "boolean",
+              "configured_at": "timestamp string | null — space-separated, no T, no zone: '2026-08-14 09:19:52.063562'. NOTE: flow/state returns ISO-8601 with a T for the same kind of field — the two endpoints do NOT agree on timestamp format, so parse defensively (src/lib/time parseUTC).",
+              "processed_at": "timestamp string | null",
+              "validated_at": "timestamp string | null",
+              "committed_at": "timestamp string | null",
+              "last_upload_batch_id": "uuid string | null",
+              "last_run_id": "uuid string | null",
+              "groups": "array | absent — only when include_groups=true; see notes for confirmed/unconfirmed shapes"
+            }
+          ],
+          "total": "number — 7 confirmed on 2026-08-17",
+          "is_empty": "boolean"
+        }
+      },
+      "sampleRequest": "GET /p0/cdm/connectors/state?plant_code_id=Plant_1&include_groups=false",
+      "sampleResponseNote": "2026-08-17 UNTRUNCATED sample (plant Plant_1), all 7 connectors: pnid COMMITTED (6/6 processed) · documents UPLOADED but committed_at set (11 files: 1 pending, 3 processed, 7 failed, has_failures true) · timeseries COMMITTED (11/11) · sap COMMITTED with processed_at NULL and both id fields null (23/23) · aif/gloc/lopc all NOT_CONFIGURED with 0 files. No groups[] key (include_groups=false).",
+      "verdict": "INTEGRATED 2026-08-17 — this endpoint now backs the entire Data Source Integration tab strip (status badge + Processed/Unprocessed file counts for all seven connectors) and replaced six localStorage keys.",
+      "serviceFn": "getConnectorsState(plantCode, { signal }) in src/services/domain-configuration/common/connectorsService.js",
+      "proxyRoute": "src/app/api/domain-configuration/connectors/state/route.js -> createProxy({ backend: 'DOMAIN_CONFIGURATION', path: '/connectors/state', methods: ['GET'] })",
+      "queryHook": "useConnectorsState(plantCode) in src/components/admin/_queries/useDsiQueries.js; key queryKeys.domainConfig.connector.state(plant); derivation deriveConnectorLifecycle() in src/components/admin/connectorState.js"
+    },
+    {
+      "method": "GET",
+      "path": "/p0/cdm/connectors/{connector}/state",
+      "description": "ONE connector's rollup, with an optional taxonomy breakdown for the card's sub-rows. Same fields as one entry of /connectors/state, plus `groups[]` when include_groups=true.",
+      "requestParams": {
+        "connector": {
+          "placement": "path",
+          "confirmed": true,
+          "required": true,
+          "values": "pnid | documents | timeseries | sap | aif | gloc | lopc — the SEVEN connector names, NOT the eight flow names. 422 on anything else."
+        },
+        "plant_code_id": {
+          "placement": "query",
+          "confirmed": true,
+          "required": true
+        },
+        "include_groups": {
+          "placement": "query",
+          "confirmed": true,
+          "required": false,
+          "default": false,
+          "note": "'Also return the taxonomy rollup.' The frontend hook defaults this to TRUE, since the whole reason to call this endpoint rather than the all-connectors one is the breakdown."
+        }
+      },
+      "responseShape": {
+        "data": {
+          "_note": "Identical to one element of /connectors/state's connectors[], plus groups[] when requested.",
+          "status": "string — UPPERCASE connector state; a THIRD vocabulary, see notes",
+          "flows": "string[] — which flow(s) the connector spans; timeseries returns ['ts','ts_values']",
+          "groups": [
+            {
+              "group_kind": "string — e.g. 'file_role'",
+              "group_key": "string — e.g. 'metadata' | 'values'",
+              "parent_key": "string | null",
+              "label": "string — display text, e.g. 'Metadata Upload'",
+              "is_custom": "boolean",
+              "sort_order": "number",
+              "counts": "the same seven-key counts object as the connector rollup",
+              "file_ids": "number[] — flow_uid values, joinable straight to /flow/state rows"
+            }
+          ]
+        }
+      },
+      "sampleRequest": "GET /p0/cdm/connectors/timeseries/state?plant_code_id=PLANT_2",
+      "sampleResponseNote": "2026-08-18 sample (PLANT_2, timeseries): status COMMITTED, flows ['ts','ts_values'], counts 10/10 processed, and groups[] with TWO file_role groups — 'metadata' (label 'Metadata Upload', 8 files) and 'values' (label 'Values Upload', 2 files), each carrying its own counts and file_ids. This is the first confirmed groups[] shape for a non-pnid connector.",
+      "errors": [
+        "422 {success:false, message:'Validation failed', errors:[{field:'connector', message:\"'nosuch' is not a valid connector. Use one of: pnid, documents, timeseries, sap, aif, gloc, lopc.\"}]}"
+      ],
+      "verdict": "NEW — wired 2026-08-18.",
+      "serviceFn": "getConnectorState(plantCode, connector, { includeGroups, signal }) in src/services/domain-configuration/common/connectorsService.js",
+      "proxyRoute": "src/app/api/domain-configuration/connectors/[connector]/state/route.js. The static `state`, `labels` and `upload` siblings take precedence over this dynamic segment, so /connectors/state still resolves to the all-connectors rollup.",
+      "queryHook": "useConnectorState(plantCode, connector, { includeGroups = true }) in useDsiQueries.js; key queryKeys.domainConfig.connector.stateOne(plant, connector, includeGroups) — includeGroups is IN the key because the flag changes the response shape, and a groups-less payload must never satisfy a caller that needs groups[]."
+    }
+  ],
+  "openIssues": [
+    "PROCESSED / VALIDATED / FAILED have still never been observed as literal `status` strings — only NOT_CONFIGURED, UPLOADED and COMMITTED. Not blocking: the app derives stage from timestamps + counts, not from the string.",
+    "`groups[]` shape for the documents and sap connectors remains unverified (include_groups=true has never been exercised on them). Not blocking — the app uses flow/state's per-file `category` instead.",
+    "Whether `?connector=` filtering is supported is unknown; Swagger lists only plant_code_id + include_groups.",
+    "Timestamp format disagrees with flow/state (space vs T separator); neither carries a timezone designator. Both are parsed with src/lib/time's parseUTC.",
+    "`processed_at` null on a fully-processed, committed connector (Plant_1's sap) is unexplained — possibly only set by pipeline runs, while sap was committed by a different path. Worth asking the backend, since it makes `processed_at` unusable as a standalone 'is processed' signal.",
+    "`groups[]` is now confirmed for pnid (1-level) and timeseries (file_role: metadata/values). The `documents` (expected 2-level type→subtype) and `sap` (expected 2-level pipeline_group→table) group shapes remain UNCONFIRMED — include_groups=true has never been exercised on either."
+  ]
+}

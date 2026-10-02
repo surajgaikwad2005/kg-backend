@@ -1,0 +1,1217 @@
+<!doctype html>
+<!--
+  Standalone UX wireframe. Its Card, Badge, Tabs, Sheet, Dialog, Progress,
+  Table, DropdownMenu, Tooltip, and Button patterns map directly to shadcn/ui.
+  The current repository has no shadcn/Radix runtime, so this file stays
+  dependency-free and does not alter the application or package manifest.
+-->
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Domain Configuration — Command Center Wireframe</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --canvas: #f8fafc;
+      --surface: #ffffff;
+      --surface-2: #f1f5f9;
+      --surface-3: #eaf0f7;
+      --text: #0f172a;
+      --text-2: #1e293b;
+      --muted: #64748b;
+      --subtle: #64748b;
+      --border: #e2e8f0;
+      --border-strong: #cbd5e1;
+      --brand: #2563eb;
+      --brand-fill: #2563eb;
+      --brand-hover: #1d4ed8;
+      --brand-soft: #eff6ff;
+      --success: #059669;
+      --success-soft: #ecfdf5;
+      --warning: #d97706;
+      --warning-soft: #fffbeb;
+      --danger: #e11d48;
+      --danger-soft: #fff1f2;
+      --info: #0284c7;
+      --info-soft: #f0f9ff;
+      --shadow-xs: 0 1px 2px rgba(15, 23, 42, .04);
+      --shadow-sm: 0 2px 8px rgba(15, 23, 42, .07);
+      --shadow-lg: 0 24px 60px rgba(15, 23, 42, .18);
+      --radius: 8px;
+      --sidebar: 256px;
+      --source-rail: 236px;
+      --header: 68px;
+      --crumb: 34px;
+      --ring: 0 0 0 3px rgba(37, 99, 235, .2);
+    }
+
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --canvas: #0f172a;
+      --surface: #1e293b;
+      --surface-2: #334155;
+      --surface-3: #29384d;
+      --text: #f1f5f9;
+      --text-2: #e2e8f0;
+      --muted: #94a3b8;
+      --subtle: #94a3b8;
+      --border: #334155;
+      --border-strong: #475569;
+      --brand: #60a5fa;
+      --brand-fill: #1d4ed8;
+      --brand-hover: #1e40af;
+      --brand-soft: #172554;
+      --success: #34d399;
+      --success-soft: rgba(6, 78, 59, .35);
+      --warning: #fbbf24;
+      --warning-soft: rgba(120, 53, 15, .32);
+      --danger: #fb7185;
+      --danger-soft: rgba(136, 19, 55, .28);
+      --info: #38bdf8;
+      --info-soft: rgba(12, 74, 110, .32);
+      --shadow-xs: 0 1px 2px rgba(0, 0, 0, .22);
+      --shadow-sm: 0 3px 10px rgba(0, 0, 0, .26);
+      --shadow-lg: 0 26px 70px rgba(0, 0, 0, .48);
+      --ring: 0 0 0 3px rgba(59, 130, 246, .28);
+    }
+
+    * { box-sizing: border-box; }
+    html, body { width: 100%; min-width: 320px; height: 100%; margin: 0; }
+    body {
+      overflow: hidden;
+      background: var(--canvas);
+      color: var(--text-2);
+      font-family: "Plus Jakarta Sans", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input, select, textarea { font: inherit; color: inherit; }
+    button { border: 0; }
+    button, select { cursor: pointer; }
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible, [tabindex]:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: 2px;
+    }
+    svg.icon { width: 17px; height: 17px; flex: 0 0 auto; stroke-width: 2; }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    .muted { color: var(--muted); }
+    .subtle { color: var(--subtle); }
+    .nowrap { white-space: nowrap; }
+    .hide { display: none !important; }
+
+    .app-shell { display: flex; width: 100%; height: 100dvh; overflow: hidden; background: var(--canvas); }
+    .global-sidebar {
+      position: relative;
+      z-index: 70;
+      display: flex;
+      width: var(--sidebar);
+      height: 100%;
+      flex: 0 0 auto;
+      flex-direction: column;
+      overflow: hidden;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      transition: width .25s ease, transform .25s ease;
+    }
+    .global-sidebar::before { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, #2563eb, #22c55e 55%, #84cc16); }
+    .sidebar-brand { position: relative; display: flex; height: var(--header); flex: 0 0 auto; align-items: center; justify-content: center; border-bottom: 1px solid var(--border); padding: 10px 20px; }
+    .brand-full { display: block; width: 164px; max-height: 44px; object-fit: contain; }
+    .brand-dark { display: none; }
+    html[data-theme="dark"] .brand-light { display: none; }
+    html[data-theme="dark"] .brand-dark { display: block; }
+    .brand-mark { display: none; width: 34px; height: 34px; object-fit: contain; }
+    .collapse-sidebar {
+      position: absolute;
+      right: 7px;
+      bottom: 6px;
+      display: grid;
+      width: 26px;
+      height: 26px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: var(--surface);
+      color: var(--muted);
+      box-shadow: var(--shadow-xs);
+    }
+    .sidebar-scroll { flex: 1; overflow-y: auto; padding: 12px; scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+    .nav-section + .nav-section { margin-top: 9px; padding-top: 9px; border-top: 1px solid var(--border); }
+    .nav-caption { display: flex; align-items: center; min-height: 28px; padding: 4px 12px; color: var(--subtle); font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .nav-item {
+      display: flex;
+      width: 100%;
+      height: 40px;
+      align-items: center;
+      gap: 11px;
+      margin: 2px 0;
+      padding: 0 12px;
+      border-radius: 10px;
+      background: transparent;
+      color: var(--muted);
+      text-align: left;
+      text-decoration: none;
+      transition: background .15s ease, color .15s ease;
+    }
+    .nav-item:hover { background: var(--surface-2); color: var(--text); }
+    .nav-item.active { background: var(--brand-fill); color: white; box-shadow: 0 5px 14px rgba(37, 99, 235, .24); }
+    .nav-item .icon { width: 18px; height: 18px; }
+    .nav-label { overflow: hidden; font-size: 13px; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+    .sidebar-foot { display: flex; align-items: center; gap: 10px; min-height: 62px; padding: 10px 14px; border-top: 1px solid var(--border); }
+    .workspace-avatar, .avatar { display: grid; place-items: center; border-radius: 50%; background: linear-gradient(145deg, #dbeafe, #bfdbfe); color: #1d4ed8; font-size: 11px; font-weight: 800; }
+    .workspace-avatar { width: 34px; height: 34px; }
+    .sidebar-foot-copy { min-width: 0; }
+    .sidebar-foot-copy strong, .sidebar-foot-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .sidebar-foot-copy strong { color: var(--text); font-size: 12px; }
+    .sidebar-foot-copy span { color: var(--muted); font-size: 10px; }
+
+    .global-sidebar.collapsed { width: 72px; }
+    .global-sidebar.collapsed .brand-full, .global-sidebar.collapsed .nav-label, .global-sidebar.collapsed .nav-caption, .global-sidebar.collapsed .sidebar-foot-copy { display: none; }
+    .global-sidebar.collapsed .brand-mark { display: block; }
+    .global-sidebar.collapsed .nav-item { justify-content: center; padding: 0; }
+    .global-sidebar.collapsed .sidebar-scroll { padding-inline: 10px; }
+    .global-sidebar.collapsed .collapse-sidebar .icon { transform: rotate(180deg); }
+
+    .app-main { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+    .page-header { position: relative; z-index: 50; flex: 0 0 auto; border-bottom: 1px solid var(--border); background: var(--surface); box-shadow: 0 1px 3px rgba(15, 23, 42, .04); }
+    .header-bar { display: flex; min-height: var(--header); align-items: center; justify-content: space-between; gap: 16px; padding: 12px 24px; }
+    .header-title-wrap { min-width: 0; flex: 1; }
+    .header-title { overflow: hidden; margin: 0; color: var(--text); font-size: 18px; font-weight: 800; letter-spacing: -.02em; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+    .header-subtitle { overflow: hidden; margin: 4px 0 0; color: var(--subtle); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+    .header-actions { display: flex; align-items: center; gap: 8px; }
+    .icon-button, .header-control {
+      display: inline-flex;
+      min-height: 38px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--muted);
+      box-shadow: var(--shadow-xs);
+    }
+    .icon-button { width: 38px; padding: 0; }
+    .icon-button:hover, .header-control:hover { border-color: var(--border-strong); color: var(--text); background: var(--surface-2); }
+    .header-control { padding: 0 11px; font-size: 12px; font-weight: 700; }
+    .header-control .icon:first-child { color: var(--brand); }
+    .avatar { width: 26px; height: 26px; }
+    .mobile-menu { display: none; }
+    .breadcrumb { display: flex; height: var(--crumb); align-items: center; gap: 8px; overflow-x: auto; padding: 0 24px; border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent); color: var(--muted); font-size: 11px; scrollbar-width: none; }
+    .breadcrumb strong { color: var(--text-2); font-weight: 700; }
+    .breadcrumb .icon { width: 12px; height: 12px; }
+
+    .feature-shell { display: flex; min-width: 0; min-height: 0; flex: 1; }
+    .source-rail {
+      position: relative;
+      z-index: 35;
+      display: flex;
+      width: var(--source-rail);
+      flex: 0 0 auto;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--surface);
+      padding: 20px 12px;
+      transition: width .22s ease;
+    }
+    .source-rail-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 30px; padding: 0 8px; }
+    .source-rail-title { color: var(--muted); font-size: 10px; font-weight: 800; letter-spacing: .11em; text-transform: uppercase; }
+    .rail-toggle { display: grid; width: 28px; height: 28px; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--muted); box-shadow: var(--shadow-xs); }
+    .rail-search { position: relative; margin: 12px 0; }
+    .rail-search .icon { position: absolute; top: 50%; left: 11px; width: 15px; height: 15px; transform: translateY(-50%); color: var(--subtle); pointer-events: none; }
+    .rail-search input { width: 100%; height: 36px; padding: 0 10px 0 34px; border: 1px solid var(--border); border-radius: 8px; outline: none; background: var(--canvas); font-size: 12px; }
+    .rail-search input:focus { border-color: var(--brand); box-shadow: var(--ring); }
+    .rail-list { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 4px; overflow-y: auto; }
+    .rail-item {
+      display: grid;
+      width: 100%;
+      min-height: 52px;
+      grid-template-columns: 34px minmax(0,1fr) auto;
+      align-items: center;
+      gap: 8px;
+      padding: 7px 8px;
+      border: 1px solid transparent;
+      border-radius: 10px;
+      background: transparent;
+      text-align: left;
+    }
+    .rail-item:hover { background: var(--surface-2); }
+    .rail-item.active { border-color: color-mix(in srgb, var(--brand) 24%, var(--border)); background: var(--brand-soft); }
+    .rail-icon { display: grid; width: 34px; height: 34px; place-items: center; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); color: var(--muted); }
+    .rail-item.active .rail-icon { border-color: color-mix(in srgb, var(--brand) 35%, var(--border)); color: var(--brand); }
+    .rail-copy { min-width: 0; }
+    .rail-copy strong, .rail-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rail-copy strong { color: var(--text); font-size: 12px; font-weight: 750; }
+    .rail-copy span { margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .state-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--subtle); box-shadow: 0 0 0 3px color-mix(in srgb, var(--subtle) 13%, transparent); }
+    .state-dot.success { background: var(--success); box-shadow: 0 0 0 3px color-mix(in srgb, var(--success) 14%, transparent); }
+    .state-dot.warning { background: var(--warning); box-shadow: 0 0 0 3px color-mix(in srgb, var(--warning) 14%, transparent); }
+    .state-dot.info { background: var(--info); box-shadow: 0 0 0 3px color-mix(in srgb, var(--info) 14%, transparent); }
+    .rail-divider { height: 1px; margin: 8px; background: var(--border); }
+    .source-rail.collapsed { width: 72px; padding-inline: 9px; }
+    .source-rail.collapsed .source-rail-title, .source-rail.collapsed .rail-search, .source-rail.collapsed .rail-copy, .source-rail.collapsed .state-dot { display: none; }
+    .source-rail.collapsed .source-rail-head { justify-content: center; padding: 0; }
+    .source-rail.collapsed .rail-item { display: flex; justify-content: center; min-height: 46px; padding: 5px; }
+    .source-rail.collapsed .rail-toggle .icon { transform: rotate(180deg); }
+
+    .content-scroll { min-width: 0; min-height: 0; flex: 1; overflow: auto; background: var(--canvas); }
+    .content { width: 100%; max-width: 1400px; min-height: 100%; margin: 0 auto; padding: 28px 30px 104px; }
+    .view-panel { display: none; }
+    .view-panel.active { display: block; animation: view-in .18s ease-out; }
+    @keyframes view-in { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+    .mobile-context { display: none; }
+    .page-intro { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; margin-bottom: 20px; }
+    .eyebrow { margin: 0 0 4px; color: var(--brand); font-size: 10px; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; }
+    .page-intro h2 { margin: 0; color: var(--text); font-size: 24px; font-weight: 820; letter-spacing: -.025em; line-height: 1.25; }
+    .page-intro p:not(.eyebrow) { max-width: 700px; margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+    .intro-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
+    .btn {
+      display: inline-flex;
+      min-height: 38px;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 13px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--text-2);
+      font-size: 12px;
+      font-weight: 750;
+      white-space: nowrap;
+      box-shadow: var(--shadow-xs);
+      transition: background .15s, border-color .15s, transform .15s;
+    }
+    .btn:hover { border-color: var(--border-strong); background: var(--surface-2); }
+    .btn:active { transform: translateY(1px); }
+    .btn.primary { border-color: var(--brand-fill); background: var(--brand-fill); color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, .2); }
+    .btn.primary:hover { border-color: var(--brand-hover); background: var(--brand-hover); }
+    .btn.ghost { border-color: transparent; background: transparent; box-shadow: none; color: var(--muted); }
+    .btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+    .btn.danger { border-color: color-mix(in srgb, var(--danger) 26%, var(--border)); color: var(--danger); }
+    .btn.sm { min-height: 32px; padding-inline: 10px; font-size: 12px; }
+    .btn.icon-only { width: 38px; padding: 0; }
+    .btn[disabled] { cursor: not-allowed; opacity: .5; transform: none; }
+
+    .badge { display: inline-flex; min-height: 22px; align-items: center; gap: 5px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: 11px; font-weight: 800; white-space: nowrap; }
+    .badge.success { border-color: color-mix(in srgb, var(--success) 25%, var(--border)); background: var(--success-soft); color: var(--success); }
+    .badge.warning { border-color: color-mix(in srgb, var(--warning) 28%, var(--border)); background: var(--warning-soft); color: var(--warning); }
+    .badge.info { border-color: color-mix(in srgb, var(--info) 25%, var(--border)); background: var(--info-soft); color: var(--info); }
+    .badge.danger { border-color: color-mix(in srgb, var(--danger) 25%, var(--border)); background: var(--danger-soft); color: var(--danger); }
+    .badge .icon { width: 12px; height: 12px; }
+
+    .workflow-card, .panel-card { border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: var(--shadow-xs); }
+    .workflow-card { margin-bottom: 18px; padding: 18px 20px 20px; }
+    .workflow-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+    .workflow-head h3, .panel-head h3 { margin: 0; color: var(--text); font-size: 14px; font-weight: 800; letter-spacing: -.01em; }
+    .workflow-head p, .panel-head p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+    .workflow-steps { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 0; margin-top: 18px; }
+    .workflow-step { position: relative; min-width: 0; padding-right: 14px; }
+    .workflow-step:not(:last-child)::after { content: ""; position: absolute; top: 14px; right: 2px; left: 34px; height: 2px; background: var(--border); }
+    .workflow-step.done:not(:last-child)::after { background: var(--success); }
+    .step-top { position: relative; z-index: 1; display: flex; align-items: center; gap: 9px; }
+    .step-icon { display: grid; width: 28px; height: 28px; flex: 0 0 auto; place-items: center; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--subtle); font-size: 11px; font-weight: 850; }
+    .workflow-step.done .step-icon { border-color: var(--success); background: var(--success); color: white; }
+    .workflow-step.current .step-icon { border-color: var(--brand-fill); background: var(--brand-fill); color: white; box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 12%, transparent); }
+    .step-copy { min-width: 0; margin-top: 8px; }
+    .step-copy strong { display: block; color: var(--text); font-size: 12px; font-weight: 780; }
+    .step-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+    .process-bar { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; padding: 12px 14px; border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--brand-soft) 55%, var(--surface)); box-shadow: var(--shadow-xs); }
+    .process-bar-icon { display: grid; width: 36px; height: 36px; flex: 0 0 auto; place-items: center; border-radius: 9px; background: var(--brand-fill); color: white; }
+    .process-bar-copy { min-width: 0; flex: 1; }
+    .process-bar-copy strong { display: block; color: var(--text); font-size: 12px; }
+    .process-bar-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 11px; }
+
+    .overview-grid { display: grid; grid-template-columns: minmax(0,1.75fr) minmax(270px,.75fr); align-items: start; gap: 18px; }
+    .panel-head { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 17px; border-bottom: 1px solid var(--border); }
+    .panel-actions { display: flex; align-items: center; gap: 7px; }
+    .segmented { display: inline-flex; padding: 3px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); }
+    .segment { min-height: 28px; padding: 0 10px; border-radius: 6px; background: transparent; color: var(--muted); font-size: 10px; font-weight: 760; }
+    .segment.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-xs); }
+    .source-list { padding: 4px 16px; }
+    .source-row {
+      display: grid;
+      grid-template-columns: minmax(210px,1.15fr) minmax(120px,.58fr) minmax(125px,.62fr) auto;
+      align-items: center;
+      gap: 14px;
+      min-height: 86px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .source-row:last-child { border-bottom: 0; }
+    .source-identity { display: flex; min-width: 0; align-items: center; gap: 12px; }
+    .source-icon { display: grid; width: 42px; height: 42px; flex: 0 0 auto; place-items: center; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); color: var(--muted); }
+    .source-icon.blue { border-color: #bfdbfe; background: #eff6ff; color: #2563eb; }
+    .source-icon.green { border-color: #bbf7d0; background: #f0fdf4; color: #16a34a; }
+    .source-icon.amber { border-color: #fde68a; background: #fffbeb; color: #d97706; }
+    .source-icon.violet { border-color: #ddd6fe; background: #f5f3ff; color: #7c3aed; }
+    html[data-theme="dark"] .source-icon.blue, html[data-theme="dark"] .source-icon.green, html[data-theme="dark"] .source-icon.amber, html[data-theme="dark"] .source-icon.violet { border-color: var(--border-strong); background: var(--surface-2); }
+    .source-icon .icon { width: 20px; height: 20px; }
+    .source-name { min-width: 0; }
+    .source-name strong { display: block; overflow: hidden; color: var(--text); font-size: 13px; font-weight: 790; text-overflow: ellipsis; white-space: nowrap; }
+    .source-name span { display: block; overflow: hidden; margin-top: 3px; color: var(--muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .source-status strong, .source-metric strong { display: block; color: var(--text-2); font-size: 12px; font-weight: 750; }
+    .source-status span, .source-metric span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .row-actions { display: flex; justify-content: flex-end; align-items: center; gap: 5px; }
+    .row-menu { position: relative; }
+    .row-menu summary { display: grid; width: 34px; height: 34px; place-items: center; list-style: none; border-radius: 8px; color: var(--muted); cursor: pointer; }
+    .row-menu summary::-webkit-details-marker { display: none; }
+    .row-menu summary:hover { background: var(--surface-2); color: var(--text); }
+    .menu-pop { position: absolute; z-index: 15; top: 38px; right: 0; width: 176px; padding: 5px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface); box-shadow: var(--shadow-sm); }
+    .menu-pop button { display: flex; width: 100%; min-height: 34px; align-items: center; gap: 8px; padding: 0 9px; border-radius: 6px; background: transparent; color: var(--text-2); font-size: 11px; text-align: left; }
+    .menu-pop button:hover { background: var(--surface-2); }
+    .mini-progress { width: 100%; max-width: 105px; height: 5px; overflow: hidden; margin-top: 7px; border-radius: 999px; background: var(--surface-2); }
+    .mini-progress span { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
+
+    .attention-body { padding: 8px 16px 14px; }
+    .attention-item { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; align-items: start; gap: 10px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+    .attention-item:last-child { border-bottom: 0; }
+    .attention-num { display: grid; width: 28px; height: 28px; place-items: center; border-radius: 8px; background: var(--warning-soft); color: var(--warning); font-size: 11px; font-weight: 850; }
+    .attention-copy strong { display: block; color: var(--text); font-size: 12px; font-weight: 760; }
+    .attention-copy span { display: block; margin-top: 3px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+    .text-link { align-self: center; padding: 4px; background: transparent; color: var(--brand); font-size: 10px; font-weight: 780; }
+    .readiness { margin: 2px 16px 15px; padding: 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); }
+    .readiness-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .readiness-top strong { color: var(--text); font-size: 11px; }
+    .readiness-top span { color: var(--muted); font-size: 10px; font-weight: 700; }
+    .readiness .mini-progress { max-width: none; height: 6px; margin: 10px 0 7px; background: var(--border); }
+    .readiness p { margin: 0; color: var(--muted); font-size: 10px; }
+
+    .run-dock { position: sticky; z-index: 25; right: 0; bottom: 14px; display: flex; max-width: 720px; min-height: 54px; align-items: center; gap: 12px; margin: 18px 0 -74px auto; padding: 9px 10px 9px 13px; border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--surface) 94%, var(--brand) 6%); box-shadow: 0 12px 32px rgba(15, 23, 42, .14); }
+    .run-pulse { width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%; background: var(--brand); box-shadow: 0 0 0 5px color-mix(in srgb, var(--brand) 12%, transparent); }
+    .run-dock-copy { min-width: 0; flex: 1; }
+    .run-dock-copy strong { display: block; overflow: hidden; color: var(--text); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+    .run-dock-copy span { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .run-dock .mini-progress { width: 100px; flex: 0 0 auto; margin: 0; }
+
+    .review-toolbar { display: flex; align-items: center; gap: 8px; padding: 12px 14px; border: 1px solid var(--border); border-bottom: 0; border-radius: 10px 10px 0 0; background: var(--surface); }
+    .search-box { position: relative; min-width: 220px; flex: 1; }
+    .search-box .icon { position: absolute; top: 50%; left: 11px; width: 15px; height: 15px; transform: translateY(-50%); color: var(--subtle); }
+    .input, .select { width: 100%; height: 36px; border: 1px solid var(--border); border-radius: 8px; outline: none; background: var(--surface); color: var(--text-2); font-size: 11px; }
+    .input { padding: 0 11px 0 34px; }
+    .select { width: auto; min-width: 138px; padding: 0 30px 0 10px; }
+    .input:focus, .select:focus, .field-input:focus { border-color: var(--brand); box-shadow: var(--ring); }
+    .domain-tabs { display: flex; gap: 3px; overflow-x: auto; margin-bottom: 14px; padding: 3px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); scrollbar-width: none; }
+    .domain-tab { display: inline-flex; min-width: max-content; min-height: 32px; flex: 1; align-items: center; justify-content: center; gap: 7px; padding: 0 12px; border-radius: 7px; background: transparent; color: var(--muted); font-size: 11px; font-weight: 730; }
+    .domain-tab.active { background: var(--surface); color: var(--brand); box-shadow: var(--shadow-xs); }
+    .table-wrap { overflow: auto; border: 1px solid var(--border); border-radius: 0 0 10px 10px; background: var(--surface); }
+    .data-table { width: 100%; min-width: 880px; border-collapse: collapse; }
+    .data-table th { height: 38px; padding: 0 12px; border-bottom: 1px solid var(--border); background: var(--surface-2); color: var(--muted); font-size: 10px; font-weight: 850; letter-spacing: .07em; text-align: left; text-transform: uppercase; }
+    .data-table td { height: 52px; padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text-2); font-size: 12px; }
+    .data-table tbody tr:last-child td { border-bottom: 0; }
+    .data-table tbody tr:hover { background: color-mix(in srgb, var(--brand-soft) 55%, transparent); }
+    .asset-link { color: var(--brand); font-weight: 750; }
+    .table-actions { display: flex; align-items: center; gap: 2px; }
+    .table-actions button { display: grid; width: 30px; height: 30px; place-items: center; border-radius: 7px; background: transparent; color: var(--muted); }
+    .table-actions button:hover { background: var(--surface-2); color: var(--brand); }
+    .table-actions .icon { width: 14px; height: 14px; }
+    .table-footer { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 10px; color: var(--muted); font-size: 10px; }
+
+    .integration-hero { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 28px; margin-bottom: 18px; padding: 20px; border: 1px solid color-mix(in srgb, var(--success) 28%, var(--border)); border-radius: 12px; background: linear-gradient(135deg, var(--surface), color-mix(in srgb, var(--success-soft) 70%, var(--surface))); }
+    .integration-hero h3 { margin: 7px 0 4px; color: var(--text); font-size: 18px; }
+    .integration-hero p { max-width: 700px; margin: 0; color: var(--muted); font-size: 12px; }
+    .domain-summary-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; margin-bottom: 18px; }
+    .domain-summary { padding: 15px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-xs); }
+    .domain-summary-head { display: flex; align-items: center; gap: 9px; }
+    .domain-summary-head .source-icon { width: 34px; height: 34px; border-radius: 8px; }
+    .domain-summary-head .source-icon .icon { width: 16px; height: 16px; }
+    .domain-summary h4 { margin: 0; color: var(--text); font-size: 11px; }
+    .domain-summary p { margin: 8px 0 0; color: var(--muted); font-size: 10px; }
+
+    .run-drawer { position: fixed; z-index: 95; top: calc(var(--header) + var(--crumb) + 12px); right: 12px; bottom: 12px; width: min(420px, calc(100vw - 24px)); overflow: hidden; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); box-shadow: var(--shadow-lg); transform: translateX(calc(100% + 30px)); opacity: 0; pointer-events: none; transition: transform .25s cubic-bezier(.2,.8,.2,1), opacity .2s; }
+    .run-drawer.open { transform: none; opacity: 1; pointer-events: auto; }
+    .drawer-shell { display: flex; height: 100%; flex-direction: column; }
+    .drawer-head { display: flex; min-height: 66px; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--border); }
+    .drawer-head h3 { margin: 0; color: var(--text); font-size: 14px; }
+    .drawer-head p { margin: 2px 0 0; color: var(--muted); font-size: 10px; }
+    .drawer-body { flex: 1; overflow-y: auto; padding: 17px; }
+    .overall-progress { padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-2); }
+    .progress-label { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--text-2); font-size: 10px; font-weight: 750; }
+    .progress-label strong { color: var(--brand); }
+    .progress { height: 7px; overflow: hidden; margin-top: 10px; border-radius: 999px; background: var(--border); }
+    .progress span { display: block; height: 100%; border-radius: inherit; background: var(--brand); }
+    .run-stage { margin-top: 10px; padding: 13px; border: 1px solid var(--border); border-radius: 9px; }
+    .run-stage.active { border-color: color-mix(in srgb, var(--brand) 45%, var(--border)); background: color-mix(in srgb, var(--brand-soft) 42%, var(--surface)); }
+    .run-stage.done { border-color: color-mix(in srgb, var(--success) 30%, var(--border)); }
+    .run-stage-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .run-stage-head strong { color: var(--text); font-size: 11px; }
+    .run-stage-head span { color: var(--muted); font-size: 10px; font-weight: 750; }
+    .run-stage-head .complete { color: var(--success); }
+    .run-stage p { margin: 4px 0 0; color: var(--muted); font-size: 10px; }
+    .drawer-foot { display: flex; min-height: 64px; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); }
+
+    dialog { max-width: none; max-height: none; padding: 0; border: 0; background: transparent; color: inherit; }
+    dialog::backdrop { background: rgba(2, 6, 23, .56); backdrop-filter: blur(2px); }
+    .sheet-dialog { width: min(900px, calc(100vw - 24px)); height: 100dvh; margin: 0 0 0 auto; }
+    .sheet-panel { display: flex; width: 100%; height: 100%; flex-direction: column; background: var(--surface); box-shadow: var(--shadow-lg); }
+    .sheet-head { display: flex; min-height: 74px; align-items: center; justify-content: space-between; gap: 16px; padding: 15px 20px; border-bottom: 1px solid var(--border); }
+    .sheet-head h3 { margin: 0; color: var(--text); font-size: 16px; }
+    .sheet-head p { margin: 3px 0 0; color: var(--muted); font-size: 11px; }
+    .sheet-body { min-height: 0; flex: 1; overflow-y: auto; padding: 20px; }
+    .sheet-foot { display: flex; min-height: 70px; align-items: center; justify-content: space-between; gap: 12px; padding: 13px 20px; border-top: 1px solid var(--border); background: var(--surface); }
+    .sheet-foot-copy { color: var(--muted); font-size: 10px; }
+    .connector-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 10px; }
+    .connector-option { display: flex; min-height: 96px; flex-direction: column; align-items: flex-start; padding: 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); text-align: left; }
+    .connector-option:hover { border-color: var(--border-strong); background: var(--surface-2); }
+    .connector-option.active { border-color: var(--brand); background: var(--brand-soft); box-shadow: var(--ring); }
+    .connector-option .source-icon { width: 32px; height: 32px; margin-bottom: 9px; }
+    .connector-option strong { color: var(--text); font-size: 11px; }
+    .connector-option span { margin-top: 3px; color: var(--muted); font-size: 10px; }
+    .config-panel { display: none; margin-top: 18px; }
+    .config-panel.active { display: block; }
+    .config-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+    .config-title h4 { margin: 0; color: var(--text); font-size: 12px; }
+    .config-title span { color: var(--muted); font-size: 10px; }
+    .config-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 0; overflow: hidden; border: 1px solid var(--border); border-radius: 11px; }
+    .config-col { min-width: 0; padding: 17px; }
+    .config-col + .config-col { border-left: 1px solid var(--border); }
+    .section-label { display: block; margin: 0 0 8px; color: var(--muted); font-size: 10px; font-weight: 850; letter-spacing: .09em; text-transform: uppercase; }
+    .dropzone { display: grid; min-height: 126px; place-items: center; padding: 16px; border: 1px dashed var(--border-strong); border-radius: 9px; background: var(--canvas); color: var(--muted); text-align: center; }
+    .dropzone .icon { width: 25px; height: 25px; margin-bottom: 6px; color: var(--brand); }
+    .dropzone strong { display: block; color: var(--text); font-size: 11px; }
+    .dropzone span { display: block; margin-top: 3px; font-size: 9px; }
+    .file-queue { margin-top: 13px; }
+    .file-row { display: grid; grid-template-columns: 30px minmax(0,1fr) auto; align-items: center; gap: 9px; min-height: 54px; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+    .file-row .source-icon { width: 30px; height: 30px; border-radius: 7px; }
+    .file-copy { min-width: 0; }
+    .file-copy strong, .file-copy span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-copy strong { color: var(--text); font-size: 10px; }
+    .file-copy span { margin-top: 2px; color: var(--muted); font-size: 9px; }
+    .schema-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .schema-chip { min-height: 30px; padding: 0 10px; border: 1px solid color-mix(in srgb, var(--brand) 55%, var(--border)); border-radius: 999px; background: var(--surface); color: var(--brand); font-size: 9px; font-weight: 750; }
+    .schema-chip.dashed { border-style: dashed; }
+    .field { margin-top: 14px; }
+    .field label { display: block; margin-bottom: 6px; color: var(--text-2); font-size: 11px; font-weight: 750; }
+    .field-input { width: 100%; height: 38px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; outline: none; background: var(--surface); color: var(--text); font-size: 12px; }
+    .radio-line { display: flex; align-items: flex-start; gap: 8px; margin-top: 9px; color: var(--text-2); font-size: 10px; }
+    .radio-line input { margin-top: 2px; accent-color: var(--brand); }
+    .advanced { margin-top: 15px; border-top: 1px solid var(--border); }
+    .advanced summary { padding: 12px 0 0; color: var(--muted); font-size: 10px; font-weight: 760; cursor: pointer; }
+    .simple-config { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; padding: 17px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
+    .simple-config .field { margin: 0; }
+    .simple-config .dropzone { grid-column: 1 / -1; min-height: 140px; }
+
+    .alert-dialog { width: min(560px, calc(100vw - 28px)); margin: auto; }
+    .alert-panel { overflow: hidden; border: 1px solid var(--border); border-radius: 13px; background: var(--surface); box-shadow: var(--shadow-lg); }
+    .alert-head { display: flex; align-items: flex-start; gap: 12px; padding: 20px 20px 14px; }
+    .alert-icon { display: grid; width: 38px; height: 38px; flex: 0 0 auto; place-items: center; border-radius: 10px; background: var(--brand-soft); color: var(--brand); }
+    .alert-head h3 { margin: 0; color: var(--text); font-size: 15px; }
+    .alert-head p { margin: 5px 0 0; color: var(--muted); font-size: 11px; }
+    .alert-scope { margin: 0 20px 18px; padding: 13px; border: 1px solid var(--border); border-radius: 9px; background: var(--surface-2); }
+    .alert-scope strong { display: block; color: var(--text); font-size: 10px; }
+    .alert-scope p { margin: 5px 0 0; color: var(--muted); font-size: 10px; }
+    .scope-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 7px; margin-top: 10px; }
+    .scope-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; padding: 7px 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--surface); color: var(--muted); font-size: 9px; }
+    .scope-item strong { color: var(--text-2); font-size: 9px; }
+    .alert-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 13px 20px; border-top: 1px solid var(--border); }
+
+    .toast { position: fixed; z-index: 130; right: 18px; bottom: 18px; display: flex; max-width: min(380px, calc(100vw - 36px)); align-items: center; gap: 10px; padding: 11px 13px; border: 1px solid color-mix(in srgb, var(--success) 28%, var(--border)); border-radius: 9px; background: var(--surface); color: var(--text-2); box-shadow: var(--shadow-lg); font-size: 11px; font-weight: 700; transform: translateY(20px); opacity: 0; pointer-events: none; transition: .2s ease; }
+    .toast.show { transform: none; opacity: 1; }
+    .toast .icon { color: var(--success); }
+    .nav-scrim { display: none; }
+
+    @media (max-width: 1240px) {
+      .overview-grid { grid-template-columns: minmax(0,1fr); }
+      .attention-panel { display: grid; grid-template-columns: minmax(0,1fr) minmax(220px,.42fr); }
+      .attention-panel .panel-head { grid-column: 1 / -1; }
+      .readiness { align-self: center; }
+      .domain-summary-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 1120px) {
+      .global-sidebar { width: 72px; }
+      .global-sidebar .brand-full, .global-sidebar .nav-label, .global-sidebar .nav-caption, .global-sidebar .sidebar-foot-copy { display: none; }
+      .global-sidebar .brand-mark { display: block; }
+      .global-sidebar .nav-item { justify-content: center; padding: 0; }
+      .global-sidebar .sidebar-scroll { padding-inline: 10px; }
+      .collapse-sidebar { display: none; }
+      .content { padding-inline: 22px; }
+      .source-row { grid-template-columns: minmax(210px,1fr) minmax(110px,.55fr) auto; }
+      .source-metric { display: none; }
+    }
+    @media (max-width: 940px) {
+      .source-rail { width: 72px; padding-inline: 9px; }
+      .source-rail .source-rail-title, .source-rail .rail-search, .source-rail .rail-copy, .source-rail .state-dot { display: none; }
+      .source-rail .source-rail-head { justify-content: center; padding: 0; }
+      .source-rail .rail-item { display: flex; justify-content: center; min-height: 46px; padding: 5px; }
+      .source-rail .rail-toggle { display: none; }
+      .workflow-card { overflow-x: auto; }
+      .workflow-steps { min-width: 620px; }
+      .connector-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    }
+    @media (max-width: 767px) {
+      :root { --header: 62px; --crumb: 0px; }
+      body { overflow: hidden; }
+      .global-sidebar { position: fixed; inset: 0 auto 0 0; width: min(286px, 86vw); transform: translateX(-102%); box-shadow: var(--shadow-lg); }
+      .global-sidebar.mobile-open { width: min(286px, 86vw); transform: none; }
+      .global-sidebar.mobile-open .brand-full, .global-sidebar.mobile-open .nav-label, .global-sidebar.mobile-open .nav-caption, .global-sidebar.mobile-open .sidebar-foot-copy { display: block; }
+      .global-sidebar.mobile-open .brand-mark { display: none; }
+      .global-sidebar.mobile-open .nav-item { justify-content: flex-start; padding: 0 12px; }
+      .global-sidebar.mobile-open .sidebar-scroll { padding: 12px; }
+      .collapse-sidebar { display: none; }
+      .nav-scrim { position: fixed; z-index: 65; inset: 0; display: block; background: rgba(2,6,23,.5); opacity: 0; pointer-events: none; transition: opacity .2s; }
+      .nav-scrim.show { opacity: 1; pointer-events: auto; }
+      .mobile-menu { display: grid; }
+      .header-bar { min-height: var(--header); padding: 8px 12px; }
+      .header-title { font-size: 15px; }
+      .header-subtitle { font-size: 9px; }
+      .breadcrumb { display: none; }
+      .header-control { width: 38px; padding: 0; }
+      .header-control > span:not(.avatar), .header-control .chevron { display: none; }
+      .source-rail { display: none; }
+      .content { padding: 18px 14px 94px; }
+      .mobile-context { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+      .mobile-context select { flex: 1; height: 40px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); font-size: 12px; font-weight: 700; }
+      .page-intro { align-items: stretch; flex-direction: column; gap: 14px; }
+      .page-intro h2 { font-size: 21px; }
+      .intro-actions { width: 100%; }
+      .intro-actions .btn { flex: 1; }
+      .workflow-card { padding: 16px; }
+      .workflow-head { align-items: stretch; flex-direction: column; }
+      .workflow-head .btn { width: 100%; }
+      .workflow-card { overflow: visible; }
+      .workflow-steps { min-width: 0; grid-template-columns: 1fr; gap: 0; }
+      .workflow-step { display: grid; grid-template-columns: 28px minmax(0,1fr); gap: 11px; padding: 0 0 15px; }
+      .workflow-step:last-child { padding-bottom: 0; }
+      .workflow-step:not(:last-child)::after { top: 28px; right: auto; bottom: 0; left: 13px; width: 2px; height: auto; }
+      .step-copy { margin-top: 1px; }
+      .process-bar { align-items: stretch; flex-wrap: wrap; }
+      .process-bar-copy { min-width: calc(100% - 50px); }
+      .process-bar .btn { min-height: 44px; flex: 1; }
+      .overview-grid { grid-template-columns: 1fr; }
+      .panel-head { align-items: stretch; flex-direction: column; }
+      .panel-actions { justify-content: space-between; }
+      .source-list { padding: 0 14px; }
+      .source-row { grid-template-columns: minmax(0,1fr) auto; gap: 9px; padding: 14px 0; }
+      .source-status { grid-column: 1 / -1; padding-left: 54px; }
+      .source-status strong, .source-status span { display: inline; margin-right: 6px; }
+      .row-actions { grid-column: 1 / -1; justify-content: stretch; padding-left: 54px; }
+      .row-actions .btn { flex: 1; }
+      .attention-panel { display: block; }
+      .run-dock { left: 0; width: 100%; max-width: none; margin-bottom: -78px; }
+      .run-dock .mini-progress { display: none; }
+      .review-toolbar { flex-wrap: wrap; }
+      .search-box { min-width: 100%; }
+      .review-toolbar .select { flex: 1; min-width: 0; }
+      .review-toolbar .btn { flex: 1; }
+      .table-wrap { overflow: visible; border: 0; background: transparent; }
+      .data-table { display: block; min-width: 0; }
+      .data-table thead { display: none; }
+      .data-table tbody { display: grid; gap: 10px; }
+      .data-table tr { display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); box-shadow: var(--shadow-xs); }
+      .data-table td { display: block; height: auto; min-width: 0; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+      .data-table td::before { content: attr(data-label); display: block; margin-bottom: 4px; color: var(--subtle); font-size: 10px; font-weight: 850; letter-spacing: .07em; text-transform: uppercase; }
+      .data-table td:first-child, .data-table td:nth-child(2), .data-table td:last-child { grid-column: 1 / -1; }
+      .data-table td:last-child { border-bottom: 0; }
+      .table-actions { justify-content: flex-end; }
+      .table-footer { align-items: stretch; flex-direction: column; }
+      .table-footer .panel-actions { display: grid; grid-template-columns: 1fr 1fr; }
+      .integration-hero { grid-template-columns: 1fr; }
+      .integration-hero .btn { width: 100%; }
+      .domain-summary-grid { grid-template-columns: 1fr 1fr; }
+      .run-drawer { inset: 0; width: 100vw; border: 0; border-radius: 0; }
+      .sheet-dialog { width: 100vw; height: 100dvh; }
+      .sheet-head, .sheet-body, .sheet-foot { padding-inline: 15px; }
+      .sheet-foot { align-items: stretch; flex-direction: column; }
+      .sheet-foot-copy { text-align: center; }
+      .sheet-foot .panel-actions { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+      .connector-grid { grid-template-columns: 1fr 1fr; }
+      .connector-option { min-height: 94px; }
+      .config-grid { grid-template-columns: 1fr; }
+      .config-col + .config-col { border-top: 1px solid var(--border); border-left: 0; }
+      .simple-config { grid-template-columns: 1fr; }
+      .scope-grid { grid-template-columns: 1fr; }
+      .alert-foot { align-items: stretch; flex-direction: column-reverse; }
+      .alert-foot .btn { width: 100%; }
+      .btn, .icon-button, .header-control { min-height: 44px; }
+      .icon-button { width: 44px; }
+      .input, .select, .field-input, .mobile-context select { height: 44px; font-size: 16px; }
+      .segment, .domain-tab, .schema-chip, .row-menu summary, .table-actions button, .menu-pop button, .text-link { min-height: 44px; font-size: 12px; }
+      .row-menu summary, .table-actions button { width: 44px; }
+      .schema-chip { padding-inline: 12px; }
+    }
+    @media (max-width: 480px) {
+      .header-actions { gap: 5px; }
+      .header-actions .theme-toggle { display: none; }
+      .domain-summary-grid { grid-template-columns: 1fr; }
+      .connector-grid { grid-template-columns: 1fr; }
+      .connector-option { min-height: 72px; display: grid; grid-template-columns: 34px 1fr; column-gap: 10px; }
+      .connector-option .source-icon { grid-row: 1 / span 2; margin: 0; }
+      .connector-option span { margin: 0; }
+      .data-table tr { grid-template-columns: 1fr; }
+      .data-table td { grid-column: 1 / -1; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <svg aria-hidden="true" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" fill="none" stroke="currentColor"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-2.83 2.83-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.55V21h-4v-.08A1.7 1.7 0 0 0 8.96 19.4a1.7 1.7 0 0 0-1.88.34l-.06.06-2.83-2.83.06-.06A1.7 1.7 0 0 0 4.6 15 1.7 1.7 0 0 0 3.08 14H3v-4h.08A1.7 1.7 0 0 0 4.6 8.96a1.7 1.7 0 0 0-.34-1.88l-.06-.06 2.83-2.83.06.06A1.7 1.7 0 0 0 8.96 4.6 1.7 1.7 0 0 0 10 3.08V3h4v.08a1.7 1.7 0 0 0 1.04 1.52 1.7 1.7 0 0 0 1.88-.34l.06-.06 2.83 2.83-.06.06a1.7 1.7 0 0 0-.34 1.88A1.7 1.7 0 0 0 20.92 10H21v4h-.08A1.7 1.7 0 0 0 19.4 15Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-network" viewBox="0 0 24 24"><circle cx="6" cy="6" r="2" fill="none" stroke="currentColor"/><circle cx="18" cy="6" r="2" fill="none" stroke="currentColor"/><circle cx="12" cy="18" r="2" fill="none" stroke="currentColor"/><path d="m7.7 7.1 3.2 8.1M16.3 7.1l-3.2 8.1M8 6h8" fill="none" stroke="currentColor"/></symbol>
+      <symbol id="i-brain" viewBox="0 0 24 24"><path d="M9.5 4.5A3.5 3.5 0 0 0 6 8v.4A3.5 3.5 0 0 0 4.5 15H5a4 4 0 0 0 4 4h1V5.8a1.3 1.3 0 0 0-.5-1.3ZM14.5 4.5A3.5 3.5 0 0 1 18 8v.4a3.5 3.5 0 0 1 1.5 6.6H19a4 4 0 0 1-4 4h-1V5.8a1.3 1.3 0 0 1 .5-1.3Z" fill="none" stroke="currentColor" stroke-linecap="round"/><path d="M6 9h2M16 9h2M6 15h3M15 15h3" fill="none" stroke="currentColor"/></symbol>
+      <symbol id="i-boxes" viewBox="0 0 24 24"><path d="m12 2 4 2.2v4.6L12 11 8 8.8V4.2L12 2ZM6 13l4 2.2v4.6L6 22l-4-2.2v-4.6L6 13ZM18 13l4 2.2v4.6L18 22l-4-2.2v-4.6l4-2.2Z" fill="none" stroke="currentColor" stroke-linejoin="round"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.4 8.2-8 10-4.6-1.8-8-5-8-10V6l8-3Z" fill="none" stroke="currentColor"/><path d="m9 12 2 2 4-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3" fill="none" stroke="currentColor"/><path d="M3 20v-2a5 5 0 0 1 10 0v2M16 5a3 3 0 0 1 0 6M16 14a5 5 0 0 1 5 5v1" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-log" viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-home" viewBox="0 0 24 24"><path d="m3 11 9-8 9 8v10h-6v-6H9v6H3V11Z" fill="none" stroke="currentColor" stroke-linejoin="round"/></symbol>
+      <symbol id="i-gauge" viewBox="0 0 24 24"><path d="M4.9 19a9 9 0 1 1 14.2 0M12 12l4-3" fill="none" stroke="currentColor" stroke-linecap="round"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></symbol>
+      <symbol id="i-workflow" viewBox="0 0 24 24"><rect x="3" y="3" width="6" height="5" rx="1" fill="none" stroke="currentColor"/><rect x="15" y="16" width="6" height="5" rx="1" fill="none" stroke="currentColor"/><path d="M9 5.5h3a4 4 0 0 1 4 4v6.5M15 18.5h-3a4 4 0 0 1-4-4V8" fill="none" stroke="currentColor"/></symbol>
+      <symbol id="i-building" viewBox="0 0 24 24"><path d="M4 21V5l8-3v19M12 8h8v13M2 21h20M7 8h2M7 12h2M7 16h2M15 12h2M15 16h2" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A8 8 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z" fill="none" stroke="currentColor" stroke-linejoin="round"/></symbol>
+      <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor"/><path d="m20 20-4-4" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor"/><rect x="14" y="3" width="7" height="7" rx="1" fill="none" stroke="currentColor"/><rect x="3" y="14" width="7" height="7" rx="1" fill="none" stroke="currentColor"/><rect x="14" y="14" width="7" height="7" rx="1" fill="none" stroke="currentColor"/></symbol>
+      <symbol id="i-drawing" viewBox="0 0 24 24"><path d="M4 3h12l4 4v14H4V3Z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M16 3v5h5M7 15h3v3H7zM14 11h3v3h-3zM10 16h4M11 15v-2h3" fill="none" stroke="currentColor"/></symbol>
+      <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 5a3 3 0 0 1 3-2h5v17H7a3 3 0 0 0-3 2V5ZM20 5a3 3 0 0 0-3-2h-5v17h5a3 3 0 0 1 3 2V5Z" fill="none" stroke="currentColor" stroke-linejoin="round"/></symbol>
+      <symbol id="i-activity" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-database" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3" fill="none" stroke="currentColor"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7" fill="none" stroke="currentColor"/></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 9 5-9 5-9-5 9-5ZM3 12l9 5 9-5M3 17l9 5 9-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-alert" viewBox="0 0 24 24"><path d="m12 3 10 18H2L12 3Z" fill="none" stroke="currentColor" stroke-linejoin="round"/><path d="M12 9v5M12 18h.01" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-more" viewBox="0 0 24 24"><circle cx="5" cy="12" r="1" fill="currentColor"/><circle cx="12" cy="12" r="1" fill="currentColor"/><circle cx="19" cy="12" r="1" fill="currentColor"/></symbol>
+      <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v4h16v-4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor"/><circle cx="12" cy="12" r="2.5" fill="none" stroke="currentColor"/></symbol>
+      <symbol id="i-edit" viewBox="0 0 24 24"><path d="m14 5 5 5M4 20l3.5-.7L19 7.8a2 2 0 0 0-2.8-2.8L4.7 16.5 4 20Z" fill="none" stroke="currentColor" stroke-linejoin="round"/></symbol>
+      <symbol id="i-filter" viewBox="0 0 24 24"><path d="M4 5h16l-6 7v6l-4 2v-8L4 5Z" fill="none" stroke="currentColor" stroke-linejoin="round"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" fill="none" stroke="currentColor"/><path d="M8 10V7a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor"/><path d="M12 11v5M12 8h.01" fill="none" stroke="currentColor" stroke-linecap="round"/></symbol>
+      <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5M18.5 9A7 7 0 0 0 6 6.5L4 9M5.5 15A7 7 0 0 0 18 17.5l2-2.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z" fill="none" stroke="currentColor" stroke-linejoin="round"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    </defs>
+  </svg>
+
+  <div class="app-shell">
+    <aside class="global-sidebar" id="globalSidebar" aria-label="Primary navigation">
+      <div class="sidebar-brand">
+        <img class="brand-full brand-light" src="../../../public/tridiagonal_ai_logo_light_theme.png" alt="Tridiagonal.ai" />
+        <img class="brand-full brand-dark" src="../../../public/tridiagonal_ai_logo_dark_theme.png" alt="Tridiagonal.ai" />
+        <img class="brand-mark" src="../../../public/images/TAI_logo.png" alt="TAI" />
+        <button class="collapse-sidebar" id="collapseSidebar" type="button" aria-label="Collapse primary navigation" aria-expanded="true">
+          <svg class="icon"><use href="#i-chevron-left" /></svg>
+        </button>
+      </div>
+      <nav class="sidebar-scroll">
+        <section class="nav-section">
+          <div class="nav-caption">Domain Ontology</div>
+          <a class="nav-item active" href="#overview" aria-current="page" aria-label="Domain Configuration" title="Domain Configuration"><svg class="icon"><use href="#i-settings" /></svg><span class="nav-label">Domain Configuration</span></a>
+          <a class="nav-item" href="#" aria-label="Knowledge Graph" title="Knowledge Graph"><svg class="icon"><use href="#i-network" /></svg><span class="nav-label">Knowledge Graph</span></a>
+          <a class="nav-item" href="#" aria-label="Symbolic AI" title="Symbolic AI"><svg class="icon"><use href="#i-brain" /></svg><span class="nav-label">Symbolic AI</span></a>
+          <a class="nav-item" href="#" aria-label="CPCP" title="CPCP"><svg class="icon"><use href="#i-boxes" /></svg><span class="nav-label">CPCP</span></a>
+          <a class="nav-item" href="#" aria-label="Risk Template" title="Risk Template"><svg class="icon"><use href="#i-shield" /></svg><span class="nav-label">Risk Template</span></a>
+        </section>
+        <section class="nav-section">
+          <div class="nav-caption">Administration</div>
+          <a class="nav-item" href="#" aria-label="Data Activity" title="Data Activity"><svg class="icon"><use href="#i-chart" /></svg><span class="nav-label">Data Activity</span></a>
+          <a class="nav-item" href="#" aria-label="Group Management" title="Group Management"><svg class="icon"><use href="#i-users" /></svg><span class="nav-label">Group Management</span></a>
+          <a class="nav-item" href="#" aria-label="Log Management" title="Log Management"><svg class="icon"><use href="#i-log" /></svg><span class="nav-label">Log Management</span></a>
+        </section>
+        <section class="nav-section">
+          <div class="nav-caption">Workspace</div>
+          <a class="nav-item" href="#" aria-label="Home" title="Home"><svg class="icon"><use href="#i-home" /></svg><span class="nav-label">Home</span></a>
+          <a class="nav-item" href="#" aria-label="Dashboard" title="Dashboard"><svg class="icon"><use href="#i-gauge" /></svg><span class="nav-label">Dashboard</span></a>
+          <a class="nav-item" href="#" aria-label="Workflow Management" title="Workflow Management"><svg class="icon"><use href="#i-workflow" /></svg><span class="nav-label">Workflow Management</span></a>
+        </section>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="workspace-avatar">AJ</div>
+        <div class="sidebar-foot-copy"><strong>Admin workspace</strong><span>Plant operations</span></div>
+      </div>
+    </aside>
+
+    <button class="nav-scrim" id="navScrim" type="button" aria-label="Close navigation" tabindex="-1"></button>
+
+    <main class="app-main" id="appMain">
+      <div class="page-header">
+        <header class="header-bar">
+          <button class="icon-button mobile-menu" id="mobileMenu" type="button" aria-label="Open primary navigation" aria-expanded="false"><svg class="icon"><use href="#i-menu" /></svg></button>
+          <div class="header-title-wrap">
+            <h1 class="header-title">Domain Configuration</h1>
+            <p class="header-subtitle">Data Source Integration</p>
+          </div>
+          <div class="header-actions">
+            <button class="icon-button theme-toggle" id="themeToggle" type="button" aria-label="Switch to dark theme" title="Toggle theme"><svg class="icon theme-icon"><use href="#i-moon" /></svg></button>
+            <button class="header-control" type="button" aria-label="Selected plant: MEL-04"><svg class="icon"><use href="#i-building" /></svg><span>MEL-04</span><svg class="icon chevron"><use href="#i-chevron-down" /></svg></button>
+            <button class="header-control" type="button" aria-label="Open profile menu"><span class="avatar">AJ</span><span>Anchit</span><svg class="icon chevron"><use href="#i-chevron-down" /></svg></button>
+          </div>
+        </header>
+        <nav class="breadcrumb" aria-label="Breadcrumb"><span>Domain Config</span><svg class="icon"><use href="#i-chevron-right" /></svg><strong id="crumbCurrent">Data Source Integration</strong></nav>
+      </div>
+
+      <div class="feature-shell">
+        <aside class="source-rail" id="sourceRail" aria-label="Data sources">
+          <div class="source-rail-head"><span class="source-rail-title">Data Sources</span><button class="rail-toggle" id="railToggle" type="button" aria-label="Collapse data source navigation" aria-expanded="true"><svg class="icon"><use href="#i-chevron-left" /></svg></button></div>
+          <label class="rail-search"><span class="sr-only">Search sources</span><svg class="icon"><use href="#i-search" /></svg><input type="search" placeholder="Search sources…" /></label>
+          <div class="rail-list">
+            <button class="rail-item active" type="button" data-view="overview" aria-current="page" aria-label="Overview, 4 configured sources" title="Overview"><span class="rail-icon"><svg class="icon"><use href="#i-grid" /></svg></span><span class="rail-copy"><strong>Overview</strong><span>4 configured sources</span></span><span class="state-dot success"></span></button>
+            <div class="rail-divider"></div>
+            <button class="rail-item" type="button" data-view="review" data-review-source="pnid" aria-label="P and ID, 3 findings to review" title="P&amp;ID"><span class="rail-icon"><svg class="icon"><use href="#i-drawing" /></svg></span><span class="rail-copy"><strong>P&amp;ID</strong><span>3 findings to review</span></span><span class="state-dot warning"></span></button>
+            <button class="rail-item" type="button" data-view="review" data-review-source="documents" aria-label="Documents, ready to commit" title="Documents"><span class="rail-icon"><svg class="icon"><use href="#i-book" /></svg></span><span class="rail-copy"><strong>Documents</strong><span>Ready to commit</span></span><span class="state-dot success"></span></button>
+            <button class="rail-item" type="button" data-view="review" data-review-source="historian" aria-label="Historian, 12 mappings flagged" title="Historian"><span class="rail-icon"><svg class="icon"><use href="#i-activity" /></svg></span><span class="rail-copy"><strong>Historian</strong><span>12 mappings flagged</span></span><span class="state-dot warning"></span></button>
+            <button class="rail-item" type="button" data-view="overview" data-review-source="sap" data-open-run="true" aria-label="SAP, processing at 45 percent" title="SAP"><span class="rail-icon"><svg class="icon"><use href="#i-database" /></svg></span><span class="rail-copy"><strong>SAP</strong><span>Processing · 45%</span></span><span class="state-dot info"></span></button>
+            <div class="rail-divider"></div>
+            <button class="rail-item" type="button" data-view="integrated" aria-label="Preview integrated view final state" title="Integrated View"><span class="rail-icon"><svg class="icon"><use href="#i-layers" /></svg></span><span class="rail-copy"><strong>Integrated View</strong><span>Preview final state</span></span><span class="state-dot warning"></span></button>
+          </div>
+        </aside>
+
+        <div class="content-scroll" id="contentScroll">
+          <div class="content">
+            <div class="mobile-context">
+              <label class="sr-only" for="mobileView">Choose a data source view</label>
+              <select id="mobileView"><option value="overview">Overview · 4 sources</option><option value="review">Review workspace · 15 findings</option><option value="integrated">Integrated View · final-state preview</option></select>
+              <button class="btn icon-only" type="button" data-open-config aria-label="Add files or a source"><svg class="icon"><use href="#i-plus" /></svg></button>
+            </div>
+
+            <section class="view-panel active" id="overviewPanel" data-panel="overview">
+              <div class="page-intro">
+                <div><p class="eyebrow">Orchestration workspace</p><h2>Data source integration</h2><p>Configure, process, review, and commit plant data from one workspace. Every source shows its current state and the next useful action.</p></div>
+                <div class="intro-actions"><button class="btn" type="button"><svg class="icon"><use href="#i-refresh" /></svg>Refresh status</button><button class="btn primary" type="button" data-open-config><svg class="icon"><use href="#i-plus" /></svg>Add files or source</button></div>
+              </div>
+
+              <section class="workflow-card" aria-labelledby="workflowTitle">
+                <div class="workflow-head"><div><h3 id="workflowTitle">Integration readiness</h3><p>Plant MEL-04 · last updated 2 minutes ago</p></div><button class="btn sm" type="button" data-show-view="integrated">Preview final-state layout<svg class="icon"><use href="#i-arrow-right" /></svg></button></div>
+                <div class="workflow-steps" aria-label="Parallel domain configuration readiness gates">
+                  <div class="workflow-step done"><div class="step-top"><span class="step-icon"><svg class="icon"><use href="#i-check" /></svg></span></div><div class="step-copy"><strong>Sources configured</strong><span>4 of 4 connected</span></div></div>
+                  <div class="workflow-step current"><div class="step-top"><span class="step-icon">2</span></div><div class="step-copy"><strong>Processing</strong><span>2 active · 2 complete</span></div></div>
+                  <div class="workflow-step current"><div class="step-top"><span class="step-icon">3</span></div><div class="step-copy"><strong>Review &amp; validate</strong><span>15 findings across 2 sources</span></div></div>
+                  <div class="workflow-step"><div class="step-top"><span class="step-icon"><svg class="icon"><use href="#i-lock" /></svg></span></div><div class="step-copy"><strong>Commit integrated view</strong><span>Available after review</span></div></div>
+                </div>
+              </section>
+
+              <div class="process-bar"><span class="process-bar-icon"><svg class="icon"><use href="#i-play" /></svg></span><span class="process-bar-copy"><strong>4 new files across 2 sources are ready for the next run</strong><span>1 P&amp;ID drawing and 3 documents can be queued while the current run continues.</span></span><button class="btn" type="button">Review batch</button><button class="btn primary" id="queueBatch" type="button">Queue next batch</button></div>
+
+              <div class="overview-grid">
+                <section class="panel-card" aria-labelledby="sourcesTitle">
+                  <div class="panel-head"><div><h3 id="sourcesTitle">Sources</h3><p>One state, one clear next action for every connector</p></div><div class="panel-actions"><div class="segmented" aria-label="Source display"><button class="segment active" type="button" aria-pressed="true">Sources</button><button class="segment" type="button" aria-pressed="false">Files</button></div><button class="btn icon-only sm" type="button" aria-label="Filter sources"><svg class="icon"><use href="#i-filter" /></svg></button></div></div>
+                  <div class="source-list">
+                    <article class="source-row">
+                      <div class="source-identity"><span class="source-icon blue"><svg class="icon"><use href="#i-drawing" /></svg></span><span class="source-name"><strong>P&amp;ID drawings</strong><span>12 drawings · last run today at 10:42</span></span></div>
+                      <div class="source-status"><strong><span class="badge warning"><svg class="icon"><use href="#i-alert" /></svg>Needs review · 3</span></strong><span>Relationships extracted</span></div>
+                      <div class="source-metric"><strong>1,421 relationships</strong><span>98.4% high confidence</span></div>
+                      <div class="row-actions"><button class="btn sm primary" type="button" data-show-view="review" data-review-source="pnid" data-attention-only="true">Review findings</button><details class="row-menu"><summary aria-label="More P&amp;ID actions"><svg class="icon"><use href="#i-more" /></svg></summary><div class="menu-pop"><button type="button">View files</button><button type="button">View run history</button><button type="button">Add drawings</button></div></details></div>
+                    </article>
+                    <article class="source-row">
+                      <div class="source-identity"><span class="source-icon green"><svg class="icon"><use href="#i-book" /></svg></span><span class="source-name"><strong>Documents</strong><span>86 files · inspection reports and SOPs</span></span></div>
+                      <div class="source-status"><strong><span class="badge success"><svg class="icon"><use href="#i-check" /></svg>Ready to commit</span></strong><span>All required fields mapped</span></div>
+                      <div class="source-metric"><strong>8,630 entities</strong><span>86 of 86 files processed</span></div>
+                      <div class="row-actions"><button class="btn sm" type="button" data-show-view="review" data-review-source="documents">Review &amp; commit</button><details class="row-menu"><summary aria-label="More document actions"><svg class="icon"><use href="#i-more" /></svg></summary><div class="menu-pop"><button type="button">Add files</button><button type="button">View run history</button><button type="button">Edit configuration</button></div></details></div>
+                    </article>
+                    <article class="source-row">
+                      <div class="source-identity"><span class="source-icon amber"><svg class="icon"><use href="#i-activity" /></svg></span><span class="source-name"><strong>Historian / Timeseries</strong><span>Live connection · sensor tag logs</span></span></div>
+                      <div class="source-status"><strong><span class="badge warning"><svg class="icon"><use href="#i-alert" /></svg>Needs review · 12</span></strong><span>Unmatched equipment tags</span></div>
+                      <div class="source-metric"><strong>4,291,004 records</strong><span>Live sync healthy</span></div>
+                      <div class="row-actions"><button class="btn sm" type="button" data-show-view="review" data-review-source="historian" data-attention-only="true">Review mappings</button><details class="row-menu"><summary aria-label="More historian actions"><svg class="icon"><use href="#i-more" /></svg></summary><div class="menu-pop"><button type="button">View connection</button><button type="button">View runs</button><button type="button">Pause sync</button></div></details></div>
+                    </article>
+                    <article class="source-row">
+                      <div class="source-identity"><span class="source-icon violet"><svg class="icon"><use href="#i-database" /></svg></span><span class="source-name"><strong>SAP master data</strong><span>4 equipment and asset tables</span></span></div>
+                      <div class="source-status"><strong><span class="badge info"><svg class="icon"><use href="#i-refresh" /></svg>Processing · 45%</span></strong><span>Parsing equipment hierarchy</span></div>
+                      <div class="source-metric"><strong>2 of 4 tables</strong><span>1,240 records indexed</span><div class="mini-progress"><span style="width:45%"></span></div></div>
+                      <div class="row-actions"><button class="btn sm" type="button" data-open-run>View run</button><details class="row-menu"><summary aria-label="More SAP actions"><svg class="icon"><use href="#i-more" /></svg></summary><div class="menu-pop"><button type="button">View tables</button><button type="button">Open logs</button><button type="button">Cancel run</button></div></details></div>
+                    </article>
+                  </div>
+                </section>
+
+                <aside class="panel-card attention-panel" aria-labelledby="attentionTitle">
+                  <div class="panel-head"><div><h3 id="attentionTitle">Action queue</h3><p>Highest-impact work first</p></div><span class="badge warning">15 findings</span></div>
+                  <div class="attention-body">
+                    <div class="attention-item"><span class="attention-num">3</span><span class="attention-copy"><strong>Validate P&amp;ID relationships</strong><span>3 medium-confidence connections need an engineer decision.</span></span><button class="text-link" type="button" data-show-view="review" data-review-source="pnid" data-attention-only="true">Review</button></div>
+                    <div class="attention-item"><span class="attention-num">12</span><span class="attention-copy"><strong>Map historian tags</strong><span>12 tags could not be matched to equipment automatically.</span></span><button class="text-link" type="button" data-show-view="review" data-review-source="historian" data-attention-only="true">Map</button></div>
+                    <div class="attention-item"><span class="attention-num" style="background:var(--info-soft);color:var(--info)">45%</span><span class="attention-copy"><strong>SAP pipeline is running</strong><span>2 of 4 tables processed. You can continue working.</span></span><button class="text-link" type="button" data-open-run>View</button></div>
+                  </div>
+                  <div class="readiness"><div class="readiness-top"><strong>Integrated view readiness</strong><span>2 of 4 ready</span></div><div class="mini-progress"><span style="width:50%;background:var(--success)"></span></div><p>Resolve 15 findings and complete the SAP run to unlock final validation.</p></div>
+                </aside>
+              </div>
+
+              <div class="run-dock" aria-live="polite"><span class="run-pulse"></span><span class="run-dock-copy"><strong>Parallel data pipeline · run in progress</strong><span>P&amp;ID complete · Document batch 68% · SAP 45%</span></span><div class="mini-progress"><span style="width:60%"></span></div><button class="btn sm" type="button" data-open-run>View run</button></div>
+            </section>
+
+            <section class="view-panel" id="reviewPanel" data-panel="review">
+              <div class="page-intro">
+                <div><p class="eyebrow">Review workspace</p><h2 id="reviewTitle">P&amp;ID extracted relationships</h2><p id="reviewDescription">Resolve only the relationships that need attention. High-confidence rows stay visible but do not slow down review.</p></div>
+                <div class="intro-actions"><button class="btn" type="button" data-show-view="overview"><svg class="icon"><use href="#i-arrow-left" /></svg>Back to sources</button><button class="btn primary" id="reviewPrimaryAction" type="button">Save review</button></div>
+              </div>
+              <div class="domain-tabs" role="group" aria-label="Review domain"><button class="domain-tab active" type="button" data-review-source="pnid" aria-pressed="true"><svg class="icon"><use href="#i-drawing" /></svg>P&amp;ID <span class="badge warning">3</span></button><button class="domain-tab" type="button" data-review-source="documents" aria-pressed="false"><svg class="icon"><use href="#i-book" /></svg>Documents</button><button class="domain-tab" type="button" data-review-source="historian" aria-pressed="false"><svg class="icon"><use href="#i-activity" /></svg>Historian <span class="badge warning">12</span></button><button class="domain-tab" type="button" data-review-source="sap" aria-pressed="false"><svg class="icon"><use href="#i-database" /></svg>SAP</button></div>
+              <div class="review-toolbar">
+                <label class="search-box"><span class="sr-only">Search relationships</span><svg class="icon"><use href="#i-search" /></svg><input class="input" id="relationshipSearch" type="search" placeholder="Search assets, line numbers, or fluid…" /></label>
+                <select class="select" id="confidenceFilter" aria-label="Filter by confidence"><option value="all">All confidence</option><option value="attention">Needs attention</option><option value="high">High confidence</option></select>
+                <button class="btn" type="button"><svg class="icon"><use href="#i-filter" /></svg>More filters</button>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead id="reviewHead"><tr><th>Source asset</th><th>Destination asset</th><th>Piping spec</th><th>Line no.</th><th>Fluid</th><th>Confidence</th><th>Actions</th></tr></thead>
+                  <tbody id="relationshipRows">
+                    <tr data-confidence="high"><td data-label="Source asset"><span class="asset-link">VESSEL-V-101</span></td><td data-label="Destination asset"><span class="asset-link">PUMP-P-202A</span></td><td data-label="Piping spec">CS-300-A1</td><td data-label="Line no.">3&quot;-HC-1012-CS</td><td data-label="Fluid"><strong>HC</strong></td><td data-label="Confidence"><span class="badge success">98% · High</span></td><td data-label="Actions"><div class="table-actions"><button type="button" aria-label="View relationship"><svg class="icon"><use href="#i-eye" /></svg></button><button type="button" aria-label="Edit relationship"><svg class="icon"><use href="#i-edit" /></svg></button></div></td></tr>
+                    <tr data-confidence="attention"><td data-label="Source asset"><span class="asset-link">HEAT-EX-E-301</span></td><td data-label="Destination asset"><span class="asset-link">SEPARATOR-S-402</span></td><td data-label="Piping spec">CS-300-A1</td><td data-label="Line no.">6&quot;-FG-2001-CS</td><td data-label="Fluid"><strong>FG</strong></td><td data-label="Confidence"><span class="badge warning">68% · Review</span></td><td data-label="Actions"><div class="table-actions"><button type="button" aria-label="View relationship"><svg class="icon"><use href="#i-eye" /></svg></button><button type="button" aria-label="Edit relationship"><svg class="icon"><use href="#i-edit" /></svg></button></div></td></tr>
+                    <tr data-confidence="attention"><td data-label="Source asset"><span class="asset-link">PUMP-P-202B</span></td><td data-label="Destination asset"><span class="asset-link">COLUMN-C-110</span></td><td data-label="Piping spec">SS-150-B2</td><td data-label="Line no.">4&quot;-PR-1188-SS</td><td data-label="Fluid"><strong>PR</strong></td><td data-label="Confidence"><span class="badge warning">72% · Review</span></td><td data-label="Actions"><div class="table-actions"><button type="button" aria-label="View relationship"><svg class="icon"><use href="#i-eye" /></svg></button><button type="button" aria-label="Edit relationship"><svg class="icon"><use href="#i-edit" /></svg></button></div></td></tr>
+                    <tr data-confidence="attention"><td data-label="Source asset"><span class="asset-link">DRUM-D-405</span></td><td data-label="Destination asset"><span class="asset-link">VALVE-XV-91</span></td><td data-label="Piping spec">CS-150-C4</td><td data-label="Line no.">2&quot;-OW-901-CS</td><td data-label="Fluid"><strong>OW</strong></td><td data-label="Confidence"><span class="badge danger">54% · Low</span></td><td data-label="Actions"><div class="table-actions"><button type="button" aria-label="View relationship"><svg class="icon"><use href="#i-eye" /></svg></button><button type="button" aria-label="Edit relationship"><svg class="icon"><use href="#i-edit" /></svg></button></div></td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="table-footer"><span id="rowCount">Showing 4 of 1,421 relationships · 3 need attention</span><div class="panel-actions"><button class="btn sm" type="button" disabled>Previous</button><span class="badge" id="reviewPage">Page 1 of 36</span><button class="btn sm" type="button">Next</button></div></div>
+            </section>
+
+            <section class="view-panel" id="integratedPanel" data-panel="integrated">
+              <div class="page-intro"><div><p class="eyebrow">Cross-domain validation</p><h2>Integrated domain review</h2><p>Confirm the reviewed context bindings across all operational domains before the data is committed for downstream AI agents.</p></div><div class="intro-actions"><button class="btn" type="button" data-show-view="overview"><svg class="icon"><use href="#i-arrow-left" /></svg>Back to sources</button></div></div>
+              <div class="process-bar" role="note"><span class="process-bar-icon" style="background:var(--info)"><svg class="icon"><use href="#i-info" /></svg></span><span class="process-bar-copy"><strong>Final-state wireframe</strong><span>This screen represents the later state after the overview’s active run and 15 findings have been resolved.</span></span></div>
+              <section class="integration-hero"><div><span class="badge success"><svg class="icon"><use href="#i-check" /></svg>Ready for confirmation</span><h3>All 4 domains passed blocking checks</h3><p>Two non-blocking warnings remain. They are documented below and can be resolved in a future source batch without changing this reviewed set.</p></div><button class="btn primary" type="button" data-open-confirm><svg class="icon"><use href="#i-lock" /></svg>Confirm &amp; lock integrated view</button></section>
+              <div class="domain-summary-grid">
+                <article class="domain-summary"><div class="domain-summary-head"><span class="source-icon blue"><svg class="icon"><use href="#i-drawing" /></svg></span><div><h4>P&amp;ID</h4><span class="badge success">Validated</span></div></div><p>12 drawings · 1,421 relationships</p></article>
+                <article class="domain-summary"><div class="domain-summary-head"><span class="source-icon green"><svg class="icon"><use href="#i-book" /></svg></span><div><h4>Documents</h4><span class="badge success">Validated</span></div></div><p>86 files · 8,630 entities</p></article>
+                <article class="domain-summary"><div class="domain-summary-head"><span class="source-icon amber"><svg class="icon"><use href="#i-activity" /></svg></span><div><h4>Historian</h4><span class="badge success">Validated</span></div></div><p>1 tag set · 4,291,004 records</p></article>
+                <article class="domain-summary"><div class="domain-summary-head"><span class="source-icon violet"><svg class="icon"><use href="#i-database" /></svg></span><div><h4>SAP</h4><span class="badge success">Validated</span></div></div><p>4 tables · 1,240 asset records</p></article>
+              </div>
+              <section class="panel-card"><div class="panel-head"><div><h3>Cross-domain bindings</h3><p>Representative context links generated from reviewed source data</p></div><div class="panel-actions"><span class="badge warning">2 warnings</span><button class="btn sm" type="button"><svg class="icon"><use href="#i-download" /></svg>Export review</button></div></div><div class="table-wrap" style="border:0;border-radius:0 0 10px 10px"><table class="data-table"><thead><tr><th>P&amp;ID asset</th><th>Historian tags</th><th>Documents</th><th>SAP record</th><th>Validation</th></tr></thead><tbody><tr><td data-label="P&amp;ID asset"><span class="asset-link">PUMP-P-202A</span></td><td data-label="Historian tags">18 linked tags</td><td data-label="Documents">4 procedures</td><td data-label="SAP record">EQ-100238</td><td data-label="Validation"><span class="badge success">Complete</span></td></tr><tr><td data-label="P&amp;ID asset"><span class="asset-link">VESSEL-V-101</span></td><td data-label="Historian tags">11 linked tags</td><td data-label="Documents">6 documents</td><td data-label="SAP record">EQ-100114</td><td data-label="Validation"><span class="badge warning">1 warning</span></td></tr><tr><td data-label="P&amp;ID asset"><span class="asset-link">HEAT-EX-E-301</span></td><td data-label="Historian tags">9 linked tags</td><td data-label="Documents">3 procedures</td><td data-label="SAP record">EQ-100771</td><td data-label="Validation"><span class="badge warning">1 warning</span></td></tr></tbody></table></div></section>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <aside class="run-drawer" id="runDrawer" aria-label="Pipeline run" aria-hidden="true" inert>
+    <div class="drawer-shell">
+      <div class="drawer-head"><div><h3>Parallel data pipeline</h3><p>3 source batches · RUN-2048</p></div><button class="icon-button" id="closeRun" type="button" aria-label="Minimize run drawer"><svg class="icon"><use href="#i-close" /></svg></button></div>
+      <div class="drawer-body">
+        <div class="overall-progress"><div class="progress-label"><span>Overall processing progress</span><strong>60% · 3 source batches</strong></div><div class="progress" role="progressbar" aria-label="Overall pipeline progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="60"><span style="width:60%"></span></div></div>
+        <article class="run-stage done"><div class="run-stage-head"><strong>P&amp;ID drawings</strong><span class="complete">12 of 12 ✓</span></div><p>CAD vectors parsed and relationships extracted.</p></article>
+        <article class="run-stage active"><div class="run-stage-head"><strong>Documents · new batch</strong><span style="color:var(--brand)">2 of 3 · 68%</span></div><p>Extracting asset context from three newly added operating documents…</p><div class="progress" role="progressbar" aria-label="Document processing progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="68"><span style="width:68%"></span></div></article>
+        <article class="run-stage active"><div class="run-stage-head"><strong>SAP master data</strong><span style="color:var(--brand)">2 of 4 · 45%</span></div><p>Resolving equipment hierarchy and functional locations…</p><div class="progress" role="progressbar" aria-label="SAP processing progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="45"><span style="width:45%"></span></div></article>
+        <article class="run-stage"><div class="run-stage-head"><strong>Historian / Timeseries</strong><span>Not included</span></div><p>Live sync is healthy; no new batch is waiting.</p></article>
+      </div>
+      <div class="drawer-foot"><button class="btn danger" type="button">Cancel run</button><button class="btn" type="button" id="minimizeRun">Minimize &amp; keep working</button></div>
+    </div>
+  </aside>
+
+  <dialog class="sheet-dialog" id="configureDialog" aria-labelledby="configureTitle">
+    <div class="sheet-panel">
+      <div class="sheet-head"><div><h3 id="configureTitle">Add data source</h3><p>Choose a source and configure it in one place—no separate “Next step” dialog.</p></div><button class="icon-button" type="button" data-close-config aria-label="Close add data source"><svg class="icon"><use href="#i-close" /></svg></button></div>
+      <div class="sheet-body">
+        <span class="section-label">1 · Choose source</span>
+        <div class="connector-grid" role="group" aria-label="Source type">
+          <button class="connector-option active" type="button" data-connector="pnid" aria-pressed="true"><span class="source-icon blue"><svg class="icon"><use href="#i-drawing" /></svg></span><strong>P&amp;ID</strong><span>Drawings and schematics</span></button>
+          <button class="connector-option" type="button" data-connector="documents" aria-pressed="false"><span class="source-icon green"><svg class="icon"><use href="#i-book" /></svg></span><strong>Documents</strong><span>Manuals, SOPs, reports</span></button>
+          <button class="connector-option" type="button" data-connector="historian" aria-pressed="false"><span class="source-icon amber"><svg class="icon"><use href="#i-activity" /></svg></span><strong>Historian</strong><span>Timeseries and sensor tags</span></button>
+          <button class="connector-option" type="button" data-connector="sap" aria-pressed="false"><span class="source-icon violet"><svg class="icon"><use href="#i-database" /></svg></span><strong>SAP</strong><span>Equipment and asset tables</span></button>
+        </div>
+
+        <section class="config-panel active" data-config="pnid">
+          <div class="config-title"><h4>2 · Configure P&amp;ID source</h4><span>Required fields are shown first</span></div>
+          <div class="config-grid">
+            <div class="config-col"><span class="section-label">Drawing files</span><button class="dropzone" type="button"><span><svg class="icon"><use href="#i-upload" /></svg><strong>Drop files here or browse</strong><span>PDF, CAD, PNG · up to 100 MB each</span></span></button><div class="file-queue"><span class="section-label">Queued · 1 file</span><div class="file-row"><span class="source-icon blue"><svg class="icon"><use href="#i-drawing" /></svg></span><span class="file-copy"><strong>main_plant_layout.pdf</strong><span>2.4 MB · ready to upload</span></span><span class="badge success">Ready</span></div></div></div>
+            <div class="config-col"><span class="section-label">Extraction schema</span><div class="schema-chips"><button class="schema-chip" type="button">Drawing number</button><button class="schema-chip" type="button">Line ID</button><button class="schema-chip" type="button">Instrument tag</button><button class="schema-chip" type="button">Revision</button><button class="schema-chip dashed" type="button"><svg class="icon"><use href="#i-plus" /></svg>Custom key</button></div><div class="field"><label for="drawingType">Drawing type</label><select class="field-input" id="drawingType"><option>P&amp;ID</option><option>PFD</option><option>Line list</option><option>Other</option></select></div><span class="section-label" style="margin-top:16px">Ingestion mode</span><label class="radio-line"><input type="radio" name="pnid-mode" checked />Process unprocessed files only</label><label class="radio-line"><input type="radio" name="pnid-mode" />Reprocess all selected files</label><details class="advanced"><summary>Advanced extraction settings</summary></details></div>
+          </div>
+        </section>
+
+        <section class="config-panel" data-config="documents"><div class="config-title"><h4>2 · Configure document source</h4><span>Upload and classify in the same step</span></div><div class="simple-config"><button class="dropzone" type="button"><span><svg class="icon"><use href="#i-upload" /></svg><strong>Drop documents here or browse</strong><span>PDF, DOCX, TXT · up to 100 MB each</span></span></button><div class="field"><label for="docCategory">Category</label><select class="field-input" id="docCategory"><option>Operating manuals</option><option>Inspection reports</option><option>Standard operating procedures</option></select></div><div class="field"><label for="docPlant">Plant scope</label><input class="field-input" id="docPlant" value="MEL-04" /></div></div></section>
+        <section class="config-panel" data-config="historian"><div class="config-title"><h4>2 · Configure historian connection</h4><span>Connection details stay editable before sync</span></div><div class="simple-config"><div class="field"><label for="histProtocol">Protocol</label><select class="field-input" id="histProtocol"><option>OPC-UA</option><option>Historian REST API</option></select></div><div class="field"><label for="histEndpoint">Endpoint</label><input class="field-input" id="histEndpoint" placeholder="opc.tcp://host:4840" /></div><div class="field"><label for="histNamespace">Tag namespace</label><input class="field-input" id="histNamespace" placeholder="MEL-04/*" /></div><div class="field"><label for="histMode">Sync mode</label><select class="field-input" id="histMode"><option>Live sync</option><option>Scheduled batch</option></select></div></div></section>
+        <section class="config-panel" data-config="sap"><div class="config-title"><h4>2 · Configure SAP source</h4><span>Select only the tables required for domain context</span></div><div class="simple-config"><div class="field"><label for="sapSystem">System ID</label><input class="field-input" id="sapSystem" placeholder="PRD" /></div><div class="field"><label for="sapClient">Client</label><input class="field-input" id="sapClient" placeholder="100" /></div><div class="field"><label for="sapTables">Table set</label><select class="field-input" id="sapTables"><option>Equipment &amp; asset master</option><option>Maintenance orders</option></select></div><div class="field"><label for="sapPlant">Plant code</label><input class="field-input" id="sapPlant" value="MEL-04" /></div></div></section>
+      </div>
+      <div class="sheet-foot"><span class="sheet-foot-copy" id="configFootnote">1 file ready · upload adds it to the processing queue</span><div class="panel-actions"><button class="btn" type="button" data-close-config>Cancel</button><button class="btn primary" id="connectAction" type="button"><svg class="icon"><use href="#i-upload" /></svg>Upload &amp; add to queue</button></div></div>
+    </div>
+  </dialog>
+
+  <dialog class="alert-dialog" id="confirmDialog" aria-labelledby="confirmTitle">
+    <div class="alert-panel">
+      <div class="alert-head"><span class="alert-icon"><svg class="icon"><use href="#i-lock" /></svg></span><div><h3 id="confirmTitle">Confirm integrated view validation</h3><p>This commits the reviewed cross-domain bindings for plant MEL-04 and locks this version for downstream AI agents.</p></div></div>
+      <div class="alert-scope"><strong>Validation scope · 4 domains</strong><p>New source data will create a new review batch; it will not silently modify this committed version.</p><div class="scope-grid"><div class="scope-item"><span>P&amp;ID</span><strong>1,421 relationships</strong></div><div class="scope-item"><span>Documents</span><strong>86 files</strong></div><div class="scope-item"><span>Historian</span><strong>1 tag set</strong></div><div class="scope-item"><span>SAP</span><strong>4 tables</strong></div></div></div>
+      <div class="alert-foot"><button class="btn" type="button" data-close-confirm>Cancel</button><button class="btn primary" id="confirmLock" type="button"><svg class="icon"><use href="#i-lock" /></svg>Confirm &amp; lock integrated view</button></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"><svg class="icon"><use href="#i-check" /></svg><span id="toastText">Prototype action completed</span></div>
+
+  <script>
+    (() => {
+      const $ = (selector, scope = document) => scope.querySelector(selector);
+      const $$ = (selector, scope = document) => Array.from(scope.querySelectorAll(selector));
+      const html = document.documentElement;
+      const sidebar = $('#globalSidebar');
+      const rail = $('#sourceRail');
+      const navScrim = $('#navScrim');
+      const appMain = $('#appMain');
+      const mobileMenuButton = $('#mobileMenu');
+      const mobileNavQuery = window.matchMedia('(max-width: 767px)');
+      const contentScroll = $('#contentScroll');
+      const runDrawer = $('#runDrawer');
+      const configureDialog = $('#configureDialog');
+      const confirmDialog = $('#confirmDialog');
+      const mobileView = $('#mobileView');
+      const toast = $('#toast');
+      let toastTimer;
+      let runReturnFocus = null;
+      let activeReviewSource = 'pnid';
+
+      const initialReviewHead = $('#reviewHead').innerHTML;
+      const initialReviewRows = $('#relationshipRows').innerHTML;
+      const reviewActionCell = (label) => `<td data-label="Actions"><div class="table-actions"><button type="button" aria-label="View ${label}"><svg class="icon"><use href="#i-eye" /></svg></button><button type="button" aria-label="Edit ${label}"><svg class="icon"><use href="#i-edit" /></svg></button></div></td>`;
+      const reviewConfigs = {
+        pnid: {
+          label: 'P&ID',
+          title: 'P&ID extracted relationships',
+          description: 'Resolve only the relationships that need attention. High-confidence rows stay visible but do not slow down review.',
+          placeholder: 'Search assets, line numbers, or fluid…',
+          action: 'Save review',
+          head: initialReviewHead,
+          rows: initialReviewRows,
+          count: 'Showing 4 sample rows of 1,421 relationships · 3 need attention',
+          total: '1,421 total relationships',
+          page: 'Page 1 of 36'
+        },
+        documents: {
+          label: 'Documents',
+          title: 'Document extraction review',
+          description: 'Confirm document classifications and extracted asset context before committing the reviewed batch.',
+          placeholder: 'Search file, category, or linked asset…',
+          action: 'Commit reviewed documents',
+          head: '<tr><th>File</th><th>Category</th><th>Linked asset</th><th>Entities</th><th>Last updated</th><th>Confidence</th><th>Actions</th></tr>',
+          rows: [
+            `<tr data-confidence="high"><td data-label="File"><span class="asset-link">pump_maintenance_sop.pdf</span></td><td data-label="Category">Operating procedure</td><td data-label="Linked asset">PUMP-P-202A</td><td data-label="Entities">42</td><td data-label="Last updated">Today, 10:31</td><td data-label="Confidence"><span class="badge success">97% · High</span></td>${reviewActionCell('document')}</tr>`,
+            `<tr data-confidence="high"><td data-label="File"><span class="asset-link">vessel_inspection_report.pdf</span></td><td data-label="Category">Inspection report</td><td data-label="Linked asset">VESSEL-V-101</td><td data-label="Entities">28</td><td data-label="Last updated">Today, 10:28</td><td data-label="Confidence"><span class="badge success">94% · High</span></td>${reviewActionCell('document')}</tr>`,
+            `<tr data-confidence="attention"><td data-label="File"><span class="asset-link">unit_04_startup_notes.docx</span></td><td data-label="Category">Operating notes</td><td data-label="Linked asset">Unassigned</td><td data-label="Entities">16</td><td data-label="Last updated">Today, 10:25</td><td data-label="Confidence"><span class="badge warning">76% · Review</span></td>${reviewActionCell('document')}</tr>`
+          ].join(''),
+          count: 'Showing 3 sample files of 86 documents · 1 advisory finding',
+          total: '86 total documents',
+          page: 'Page 1 of 3'
+        },
+        historian: {
+          label: 'Historian',
+          title: 'Historian tag mapping review',
+          description: 'Map unmatched tags to plant assets while preserving the healthy live connection and reviewed mappings.',
+          placeholder: 'Search tag, asset, unit, or signal…',
+          action: 'Save tag mappings',
+          head: '<tr><th>Historian tag</th><th>Matched asset</th><th>Signal</th><th>Unit</th><th>Sample rate</th><th>Confidence</th><th>Actions</th></tr>',
+          rows: [
+            `<tr data-confidence="attention"><td data-label="Historian tag"><span class="asset-link">MEL04.P202A.SUC.P</span></td><td data-label="Matched asset">PUMP-P-202A</td><td data-label="Signal">Suction pressure</td><td data-label="Unit">bar</td><td data-label="Sample rate">1 sec</td><td data-label="Confidence"><span class="badge warning">71% · Review</span></td>${reviewActionCell('tag mapping')}</tr>`,
+            `<tr data-confidence="attention"><td data-label="Historian tag"><span class="asset-link">MEL04.V101.LVL.PV</span></td><td data-label="Matched asset">VESSEL-V-101</td><td data-label="Signal">Level</td><td data-label="Unit">%</td><td data-label="Sample rate">5 sec</td><td data-label="Confidence"><span class="badge warning">68% · Review</span></td>${reviewActionCell('tag mapping')}</tr>`,
+            `<tr data-confidence="attention"><td data-label="Historian tag"><span class="asset-link">MEL04.E301.TOUT</span></td><td data-label="Matched asset">HEAT-EX-E-301</td><td data-label="Signal">Outlet temperature</td><td data-label="Unit">°C</td><td data-label="Sample rate">2 sec</td><td data-label="Confidence"><span class="badge warning">74% · Review</span></td>${reviewActionCell('tag mapping')}</tr>`,
+            `<tr data-confidence="high"><td data-label="Historian tag"><span class="asset-link">MEL04.P202A.RUN</span></td><td data-label="Matched asset">PUMP-P-202A</td><td data-label="Signal">Running state</td><td data-label="Unit">bool</td><td data-label="Sample rate">Event</td><td data-label="Confidence"><span class="badge success">99% · High</span></td>${reviewActionCell('tag mapping')}</tr>`
+          ].join(''),
+          count: 'Showing 4 sample tags of 18,204 mappings · 12 need attention',
+          total: '18,204 total tag mappings',
+          page: 'Page 1 of 456'
+        },
+        sap: {
+          label: 'SAP',
+          title: 'SAP table review',
+          description: 'Inspect parsed equipment hierarchy and table-level validation before committing master-data context.',
+          placeholder: 'Search table, record type, or plant field…',
+          action: 'Save table review',
+          head: '<tr><th>Table</th><th>Purpose</th><th>Records</th><th>Mapped fields</th><th>Run state</th><th>Confidence</th><th>Actions</th></tr>',
+          rows: [
+            `<tr data-confidence="high"><td data-label="Table"><span class="asset-link">EQUI</span></td><td data-label="Purpose">Equipment master</td><td data-label="Records">1,240</td><td data-label="Mapped fields">18 of 18</td><td data-label="Run state"><span class="badge success">Processed</span></td><td data-label="Confidence"><span class="badge success">100% · High</span></td>${reviewActionCell('SAP table')}</tr>`,
+            `<tr data-confidence="high"><td data-label="Table"><span class="asset-link">IFLOT</span></td><td data-label="Purpose">Functional locations</td><td data-label="Records">612</td><td data-label="Mapped fields">12 of 12</td><td data-label="Run state"><span class="badge success">Processed</span></td><td data-label="Confidence"><span class="badge success">98% · High</span></td>${reviewActionCell('SAP table')}</tr>`,
+            `<tr data-confidence="attention"><td data-label="Table"><span class="asset-link">EQKT</span></td><td data-label="Purpose">Equipment text</td><td data-label="Records">1,187</td><td data-label="Mapped fields">7 of 8</td><td data-label="Run state"><span class="badge info">Processing</span></td><td data-label="Confidence"><span class="badge warning">82% · Review</span></td>${reviewActionCell('SAP table')}</tr>`
+          ].join(''),
+          count: 'Showing 3 sample tables of 4 · processing is still active',
+          total: '4 total SAP tables',
+          page: 'Page 1 of 1'
+        }
+      };
+
+      function showToast(message) {
+        $('#toastText').textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+      }
+
+      function renderReviewSource(source = 'pnid', attentionOnly = false) {
+        const config = reviewConfigs[source] || reviewConfigs.pnid;
+        activeReviewSource = source in reviewConfigs ? source : 'pnid';
+        $('#reviewTitle').textContent = config.title;
+        $('#reviewDescription').textContent = config.description;
+        $('#reviewPrimaryAction').textContent = config.action;
+        $('#reviewPage').textContent = config.page;
+        $('#relationshipSearch').value = '';
+        $('#relationshipSearch').placeholder = config.placeholder;
+        $('#confidenceFilter').value = attentionOnly ? 'attention' : 'all';
+        $('#reviewHead').innerHTML = config.head;
+        $('#relationshipRows').innerHTML = config.rows;
+        $$('.domain-tab').forEach(tab => {
+          const active = tab.dataset.reviewSource === activeReviewSource;
+          tab.classList.toggle('active', active);
+          tab.setAttribute('aria-pressed', String(active));
+        });
+        applyRelationshipFilters();
+      }
+
+      function openReview(source = 'pnid', attentionOnly = false, requestedRailItem = null) {
+        const matchingRailItem = requestedRailItem || $(`.rail-item[data-review-source="${source}"]`);
+        renderReviewSource(source, attentionOnly);
+        setView('review', matchingRailItem);
+      }
+
+      function setView(view, requestedRailItem = null) {
+        $$('[data-panel]').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === view));
+        let firstMatchClaimed = false;
+        $$('.rail-item[data-view]').forEach(item => {
+          const isCandidate = item.dataset.view === view && !item.dataset.openRun;
+          const active = requestedRailItem ? item === requestedRailItem : isCandidate && !firstMatchClaimed;
+          if (active) firstMatchClaimed = true;
+          item.classList.toggle('active', active);
+          if (active) item.setAttribute('aria-current', 'page'); else item.removeAttribute('aria-current');
+        });
+        $('#crumbCurrent').textContent = view === 'review' ? `${reviewConfigs[activeReviewSource].label} Review` : view === 'integrated' ? 'Integrated Domain Review' : 'Data Source Integration';
+        if (mobileView) mobileView.value = view;
+        contentScroll.scrollTop = 0;
+      }
+
+      $('#collapseSidebar').addEventListener('click', event => {
+        const collapsed = sidebar.classList.toggle('collapsed');
+        event.currentTarget.setAttribute('aria-expanded', String(!collapsed));
+        event.currentTarget.setAttribute('aria-label', collapsed ? 'Expand primary navigation' : 'Collapse primary navigation');
+      });
+      $('#railToggle').addEventListener('click', event => {
+        const collapsed = rail.classList.toggle('collapsed');
+        event.currentTarget.setAttribute('aria-expanded', String(!collapsed));
+        event.currentTarget.setAttribute('aria-label', collapsed ? 'Expand data source navigation' : 'Collapse data source navigation');
+      });
+
+      function openMobileNav() {
+        sidebar.removeAttribute('inert');
+        sidebar.classList.add('mobile-open');
+        navScrim.classList.add('show');
+        mobileMenuButton.setAttribute('aria-expanded', 'true');
+        const firstTarget = $('.nav-item.active', sidebar) || $('.nav-item', sidebar);
+        firstTarget?.focus();
+        appMain.setAttribute('inert', '');
+      }
+
+      function closeMobileNav({ restoreFocus = true } = {}) {
+        sidebar.classList.remove('mobile-open');
+        navScrim.classList.remove('show');
+        mobileMenuButton.setAttribute('aria-expanded', 'false');
+        appMain.removeAttribute('inert');
+        if (mobileNavQuery.matches) sidebar.setAttribute('inert', '');
+        if (restoreFocus) mobileMenuButton.focus();
+      }
+
+      function syncMobileNav() {
+        if (mobileNavQuery.matches && !sidebar.classList.contains('mobile-open')) sidebar.setAttribute('inert', '');
+        else sidebar.removeAttribute('inert');
+      }
+
+      mobileMenuButton.addEventListener('click', openMobileNav);
+      navScrim.addEventListener('click', closeMobileNav);
+      $$('.nav-item', sidebar).forEach(link => link.addEventListener('click', () => { if (mobileNavQuery.matches) closeMobileNav({ restoreFocus: false }); }));
+      mobileNavQuery.addEventListener?.('change', () => { if (!mobileNavQuery.matches) closeMobileNav({ restoreFocus: false }); syncMobileNav(); });
+      syncMobileNav();
+
+      $('#themeToggle').addEventListener('click', () => {
+        const dark = html.dataset.theme !== 'dark';
+        html.dataset.theme = dark ? 'dark' : 'light';
+        $('#themeToggle').setAttribute('aria-label', dark ? 'Switch to light theme' : 'Switch to dark theme');
+        $('.theme-icon use').setAttribute('href', dark ? '#i-sun' : '#i-moon');
+      });
+
+      $$('[data-show-view]').forEach(button => button.addEventListener('click', () => {
+        if (button.dataset.showView === 'review') openReview(button.dataset.reviewSource || 'pnid', button.dataset.attentionOnly === 'true');
+        else setView(button.dataset.showView);
+      }));
+      $$('.rail-item[data-view]').forEach(button => button.addEventListener('click', () => {
+        if (button.dataset.openRun) return;
+        if (button.dataset.view === 'review') openReview(button.dataset.reviewSource || 'pnid', false, button);
+        else setView(button.dataset.view, button);
+      }));
+      mobileView.addEventListener('change', event => event.target.value === 'review' ? openReview('pnid') : setView(event.target.value));
+      $$('.domain-tab').forEach(tab => tab.addEventListener('click', () => openReview(tab.dataset.reviewSource || 'pnid')));
+      $$('.segment').forEach(segment => segment.addEventListener('click', () => {
+        $$('.segment').forEach(item => { const active = item === segment; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); });
+      }));
+
+      function openRun(event) {
+        runReturnFocus = event?.currentTarget || document.activeElement;
+        runReturnFocus?.setAttribute?.('aria-expanded', 'true');
+        runDrawer.removeAttribute('inert');
+        runDrawer.classList.add('open');
+        runDrawer.setAttribute('aria-hidden', 'false');
+        setTimeout(() => $('#closeRun').focus(), 0);
+      }
+      function closeRun() {
+        runDrawer.classList.remove('open');
+        runDrawer.setAttribute('aria-hidden', 'true');
+        runDrawer.setAttribute('inert', '');
+        runReturnFocus?.setAttribute?.('aria-expanded', 'false');
+        runReturnFocus?.focus?.();
+      }
+      $$('[data-open-run]').forEach(button => { button.setAttribute('aria-controls', 'runDrawer'); button.setAttribute('aria-expanded', 'false'); button.addEventListener('click', openRun); });
+      $('#closeRun').addEventListener('click', closeRun);
+      $('#minimizeRun').addEventListener('click', closeRun);
+
+      $$('[data-open-config]').forEach(button => button.addEventListener('click', () => configureDialog.showModal()));
+      $$('[data-close-config]').forEach(button => button.addEventListener('click', () => configureDialog.close()));
+      configureDialog.addEventListener('click', event => { if (event.target === configureDialog) configureDialog.close(); });
+
+      const connectorCopy = {
+        pnid: ['Upload & add to queue', '1 file ready · upload adds it to the processing queue'],
+        documents: ['Upload & add to queue', 'Documents are classified, then added to the processing queue'],
+        historian: ['Connect source', 'The connection will be tested before live sync starts'],
+        sap: ['Connect & select tables', 'Credentials are validated before tables are loaded']
+      };
+      $$('.connector-option').forEach(option => option.addEventListener('click', () => {
+        const connector = option.dataset.connector;
+        $$('.connector-option').forEach(item => { const active = item === option; item.classList.toggle('active', active); item.setAttribute('aria-pressed', String(active)); });
+        $$('.config-panel').forEach(panel => panel.classList.toggle('active', panel.dataset.config === connector));
+        $('#connectAction').lastChild.textContent = connectorCopy[connector][0];
+        $('#configFootnote').textContent = connectorCopy[connector][1];
+      }));
+      $('#connectAction').addEventListener('click', () => { configureDialog.close(); showToast('Source configuration is ready for implementation review.'); });
+      $('#queueBatch').addEventListener('click', () => showToast('Next batch queued: 4 files across P&ID and Documents.'));
+
+      $$('[data-open-confirm]').forEach(button => button.addEventListener('click', () => confirmDialog.showModal()));
+      $$('[data-close-confirm]').forEach(button => button.addEventListener('click', () => confirmDialog.close()));
+      confirmDialog.addEventListener('click', event => { if (event.target === confirmDialog) confirmDialog.close(); });
+      $('#confirmLock').addEventListener('click', () => { confirmDialog.close(); showToast('Integrated view locked for this prototype state.'); });
+
+      function applyRelationshipFilters() {
+        const confidence = $('#confidenceFilter').value;
+        const query = $('#relationshipSearch').value.trim().toLowerCase();
+        let visible = 0;
+        $$('#relationshipRows tr').forEach(row => {
+          const matchesConfidence = confidence === 'all' || row.dataset.confidence === confidence;
+          const matchesQuery = !query || row.textContent.toLowerCase().includes(query);
+          row.hidden = !(matchesConfidence && matchesQuery);
+          if (!row.hidden) visible += 1;
+        });
+        const config = reviewConfigs[activeReviewSource];
+        $('#rowCount').textContent = confidence === 'all' && !query
+          ? config.count
+          : `Showing ${visible} matching sample row${visible === 1 ? '' : 's'} · ${config.total}`;
+      }
+      $('#confidenceFilter').addEventListener('change', applyRelationshipFilters);
+      $('#relationshipSearch').addEventListener('input', applyRelationshipFilters);
+      $('#reviewPrimaryAction').addEventListener('click', () => showToast(`${reviewConfigs[activeReviewSource].label} review changes saved.`));
+
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape' && sidebar.classList.contains('mobile-open')) {
+          event.preventDefault();
+          closeMobileNav();
+          return;
+        }
+        if (event.key === 'Tab' && sidebar.classList.contains('mobile-open')) {
+          const focusable = $$('a[href], button:not([disabled]), input:not([disabled])', sidebar).filter(node => node.getClientRects().length > 0 && !node.closest('[hidden]'));
+          const first = focusable[0];
+          const last = focusable[focusable.length - 1];
+          if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus(); }
+          else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
+        }
+        if (event.key === 'Escape' && runDrawer.classList.contains('open') && !document.querySelector('dialog[open]')) closeRun();
+      });
+    })();
+  </script>
+</body>
+</html>

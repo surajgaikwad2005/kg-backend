@@ -1,0 +1,148 @@
+{
+  "domain": "cdm-connectors-upload",
+  "parentDomain": "domain-configuration (CDM)",
+  "backend": "DOMAIN_CONFIGURATION",
+  "backendBasePath": "/p0/cdm",
+  "gatewayHost": "http://127.0.0.1:8000",
+  "auth": {
+    "scheme": "cookie + bearer (dual)",
+    "cookies": ["access_token", "refresh_token"],
+    "note": "Handled globally by src/proxy.js + src/app/api/_lib/proxy.js. Never add auth headers per-route."
+  },
+  "notes": [
+    "2026-08-13 update: Pointed DOMAIN_CONFIGURATION backend from deployed http://172.16.0.12/api/decisionops-pod1/p0/cdm to local backend http://127.0.0.1:8000/p0/cdm.",
+    "2026-08-13 migration: ONE unified upload endpoint (connector as a form field) replaces the four separate per-connector upload routes (/connectors/<connector>/upload) for documents, timeseries, and sap. pnid was deliberately NOT migrated — it still posts to its own /connectors/pnid/upload via src/app/api/domain-configuration/pnid/[...path]/route.js.",
+    "2026-08-13 CORRECTION (live 422): connector=documents does NOT use the `file_type` field name — the backend rejected it with {\"success\": false, \"message\": \"document_type is required when uploading documents.\", \"errors\": [{\"field\": \"document_type\", \"message\": \"document_type is required.\"}]}. documents keeps its OLD field name `document_type` even on the new unified endpoint; only timeseries (`file_type`: metadata|values, confirmed) and sap (`file_type`: SAP, confirmed) use `file_type`.",
+    "2026-08-17 update — confirmed live via Network tab (connector=documents, 200 success) + Swagger UI for POST /p0/cdm/connectors/upload: (1) `connector` enum now natively includes aif/gloc/lopc/pnid alongside documents/timeseries/sap — per explicit user decision this app migrated AIF/GLOC/LOPC feed uploads off connector='sap'+file_type=<feed> onto their own native connector value ('aif'/'gloc'/'lopc', lowercased from FEED_TYPES at the call site in useConfigModalActions.handleFeedSubmit); pnid was explicitly NOT migrated (stays on its dedicated /connectors/pnid/upload route — no live-tested request against this endpoint for pnid yet). (2) New required field `labels` (except pnid) — the four fixed use-case values integrity|reliability|maintenance|production, comma-joined or repeated, LOWERCASE (this app's old FILE_LABEL_OPTIONS values were capitalized — fixed in admin.constants.js). (3) New optional field `files_meta` — per-file JSON `[{file_name, labels}]` for batches where files carry different labels; built by the new connectorsService.buildUploadLabelFields() helper and wired into every submit path (documents, sap, timeseries metadata/values, feeds). (4) The old app convention of collapsing all files' labels into a single `document_type_label` field (only the FIRST file's labels, discarding the rest) was a bug — `document_type_label` has been removed from every submit path; it is NOT the same thing as `labels` (its real purpose is unconfirmed — Swagger shows it as an optional string|null field, sent empty in the live-captured request, no description text was legible in the provided screenshot). (5) `source_columns` also appears as an optional field on this endpoint per Swagger, but the live-captured request left it blank and this app still sets source_columns via the separate updateUserConfig() call — left unchanged, not sent on the upload request itself.",
+    "2026-08-17 KNOWN GAP — RESOLVED (see the GET /connectors/labels entry below): ConfigModal.jsx's handleGlobalDocSubmit (the 'Upload & Sync All' footer button, which batches ALL pending docFiles across every doc subtype in one go) used to send no `labels` at all, because docFileLabels was local state inside useDocSourceModal.js. Fixed on 2026-08-17 by lifting docFileLabels into shared AdminForm state (useDocsFormState.js → useAdminContextValues.js), so both doc submit paths read the same filename→labels map; handleGlobalDocSubmit now appends labels + files_meta via buildUploadLabelFields, and its button stays disabled until every queued file is labelled. Consequence of the lift: resetDocModalState() no longer wipes the whole map on modal close (files queued under other subtypes must keep their labels) — labels are dropped per file on removal, per batch on per-subtype submit, and wholesale after a global submit.",
+    "2026-08-17 unconfirmed vs current app taxonomy: user-supplied confirmed document_type values are equipment_datasheets, incident_reports, cause_effect_matrix, sop, startup_shutdown, operating_manuals, log_sheets, batch_reports, maintenance_manuals, rca_reports, hazop, jsa_jha, msds_sds, erp_plan, ptw. This list does not explicitly include `inspection_reports` or `other_files`, both of which exist in this app's DOC_TYPE_CATEGORIES/DOC_ROW_KEYS (admin.constants.js / useSourceTabs.js) and are still wired up in the UI. Most likely explanation is a copy/paste omission (inspection_reports vs incident_reports look alike and incident_reports appears twice in the pasted list), not a real backend removal — left the UI taxonomy untouched since removing either would delete working functionality on a guess. Flag to the user if either type starts getting rejected live."
+  ],
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/p0/cdm/connectors/upload",
+      "fullUrl": "http://127.0.0.1:8000/p0/cdm/connectors/upload",
+      "contentType": "multipart/form-data",
+      "description": "Unified upload endpoint for documents, timeseries, sap, and the natively-typed aif/gloc/lopc feeds. connector distinguishes the target instead of a URL segment. pnid is a valid value per Swagger but this app does not route pnid uploads through it (see notes).",
+      "requestFields": {
+        "connector": { "placement": "form", "confirmed": "documents confirmed live 2026-08-17; timeseries/sap confirmed 2026-08-13; aif/gloc/lopc confirmed via Swagger enum dropdown only (not yet live-tested by this app)", "values": ["documents", "timeseries", "sap", "aif", "gloc", "lopc", "pnid (Swagger-only — this app does not send it here)"] },
+        "plant_code_id": { "placement": "form", "confirmed": true },
+        "document_type": {
+          "placement": "form",
+          "confirmed": true,
+          "note": "connector=documents ONLY. Field name is document_type, NOT file_type.",
+          "values": "any DOC_TYPE_CATEGORIES key — see notes above for the backend-confirmed subset vs this app's fuller taxonomy (inspection_reports/other_files unconfirmed)."
+        },
+        "file_type": {
+          "placement": "form",
+          "confirmed": "'metadata'/'values' confirmed live for connector=timeseries; 'SAP' confirmed for connector=sap",
+          "note": "connector=timeseries and connector=sap ONLY. AIF/GLOC/LOPC no longer use file_type as of 2026-08-17 — they use their own native connector value instead.",
+          "valuesByConnector": {
+            "timeseries": ["metadata", "values"],
+            "sap": ["SAP"]
+          }
+        },
+        "labels": {
+          "placement": "form",
+          "confirmed": true,
+          "note": "Required on every connector except pnid. Comma-joined string or repeated field, lowercase. Vocabulary: integrity | reliability | maintenance | production (GET /connectors/labels returns the canonical list). This app sends the union of every uploaded file's selected labels here, and the true per-file breakdown in files_meta.",
+          "values": ["integrity", "reliability", "maintenance", "production"]
+        },
+        "files_meta": {
+          "placement": "form",
+          "confirmed": true,
+          "note": "Optional JSON array, one object per uploaded file: [{\"file_name\": \"a.pdf\", \"labels\": [\"integrity\"]}]. file_name must match the uploaded file's name. Used whenever files in a batch carry different labels (this app always sends it when any label is set, via connectorsService.buildUploadLabelFields). Per-file document_type override is also supported by the backend schema but unused by this app (documents are always uploaded one document_type per batch)."
+        },
+        "document_type_label": {
+          "placement": "form",
+          "confirmed": false,
+          "note": "Present in Swagger as optional string|null; sent empty in the only live-captured request. Purpose not confirmed — do NOT reuse for the use-case labels concept, that's `labels`/`files_meta`. This app no longer sends this field (previously misused for the per-batch label, now fixed)."
+        },
+        "source_columns": {
+          "placement": "form",
+          "confirmed": false,
+          "note": "Present in Swagger as optional string, sent empty in the live-captured request. This app still manages source columns via the separate updateUserConfig() call, not via this field — left unchanged."
+        },
+        "files": { "placement": "form", "confirmed": true, "note": "repeatable file field" }
+      },
+      "responseShape": {
+        "success": "boolean",
+        "message": "string",
+        "data": {
+          "job_id": "string",
+          "upload_batch_id": "string",
+          "plant_code_id": "string",
+          "document_type": "string (connector=documents only)",
+          "document_types": "string[] (connector=documents only)",
+          "file_type": "string (connector=timeseries/sap only)",
+          "connector": "string (present on the aif example response; not observed on the documents response)",
+          "labels": "string[] (present on the aif example response)",
+          "target_table": "string (present on the aif example response)",
+          "files": "array — per file: name, size, status, labels, metadata {kind, extension, content_type, size_bytes, page_count?, has_text_layer?, pages?[], sheets?[]}, duplicate_of, is_duplicate, duplicate_matched_on, content_hash, flow_uid, stage",
+          "accepted_count": "number",
+          "rejected_count": "number",
+          "is_partial": "boolean"
+        },
+        "note": "Response shape expanded materially on 2026-08-17 (per-file metadata detail, duplicate detection). This app currently only reads data.job_id from the response — none of the new fields (accepted_count, rejected_count, is_partial, duplicate detection) are surfaced in the UI yet. Not built out — flagged as a possible follow-up, not implemented here (out of scope of the endpoint-contract fix)."
+      },
+      "verdict": "updated 2026-08-17 — labels/files_meta added, document_type_label misuse removed, aif/gloc/lopc migrated to native connector values; pnid intentionally left out of scope",
+      "serviceFn": "uploadConnectorFile(connector, formData, plantCode) / uploadConnectorFileWithProgress(connector, formData, opts) — connector is appended into the FormData automatically for every value except 'pnid'. buildUploadLabelFields(files, fileLabelsMap) builds labels+files_meta.",
+      "serviceFile": "src/services/domain-configuration/common/connectorsService.js",
+      "proxyRoute": "src/app/api/domain-configuration/connectors/upload/route.js -> createProxy({ backend: 'DOMAIN_CONFIGURATION', path: '/connectors/upload' })",
+      "consumers": [
+        "src/components/admin/hooks/useDocSourceModal.js (handleDocSubmit — per-subtype device upload, connector=documents)",
+        "src/components/admin/hooks/useConfigModalActions.js (handleSapSubmit connector=sap, handleTsSubmit connector=timeseries x2, handleFeedSubmit connector=aif|gloc|lopc)",
+        "src/components/admin/ConfigModal.jsx (handleGlobalDocSubmit connector=documents — now sends labels + files_meta too, see the resolved KNOWN GAP note above)"
+      ],
+      "jobPolling": "unchanged — still per-connector: getConnectorJob(connector, jobId, plantCode) -> /api/domain-configuration/<connector>/jobs/{id}. AIF/GLOC/LOPC still poll via connector='sap' (job polling is backend-agnostic; there is no dedicated aif/gloc/lopc jobs/[...path] route locally, so the polling connector arg stays 'sap' even though the upload connector value changed)."
+    },
+    {
+      "method": "GET",
+      "path": "/p0/cdm/connectors/labels",
+      "fullUrl": "http://127.0.0.1:8000/p0/cdm/connectors/labels",
+      "contentType": "application/json",
+      "description": "The fixed use-case label vocabulary rendered by every connector upload modal, plus which connectors require a label and what the backend suggests per connector. Added 2026-08-17 (user-supplied contract + UI screenshot). This is the ONLY source of the list — the app's hardcoded FILE_LABEL_OPTIONS array in admin.constants.js was deleted, per explicit user decision that there be NO local fallback.",
+      "requestFields": {
+        "plant_code_id": {
+          "placement": "query",
+          "confirmed": false,
+          "note": "Not declared in the supplied contract (the payload is global reference data), but sent per CLAUDE.md Rule 0, which overrides Swagger for plant-scoped domains. FastAPI ignores unknown query params, so this is safe; drop it only if the endpoint is ever confirmed to reject extras."
+        }
+      },
+      "responseShape": {
+        "success": "boolean",
+        "message": "string",
+        "data": {
+          "labels": "array — per label: { key (the value sent in `labels`/`files_meta`, lowercase), label (display text), colour ('green'|'blue'|'amber'|'purple'), sort_order (number — render order) }",
+          "required_for": "string[] — connectors whose upload MUST carry labels. Contract sample: ['documents','timeseries','sap','aif','gloc','lopc']",
+          "not_required_for": "string[] — contract sample: ['pnid']",
+          "suggested": "object — connector -> label keys to pre-tick. Returned but DELIBERATELY UNUSED by this app: per explicit user decision (2026-08-17) the user selects labels themselves for every data source, so nothing is pre-ticked."
+        },
+        "note": "Envelope is stripped by connectorsService's unwrap(); the query hook's `select` then sorts labels by sort_order and maps colour -> a semantic-token dot class (green->bg-success, blue->bg-info, amber->bg-warning, purple->bg-brand) so the picker follows the active theme instead of a hardcoded palette."
+      },
+      "verdict": "new 2026-08-17 — wired end to end (proxy route + service + query hook + all four upload modals + submit gating)",
+      "serviceFn": "getConnectorLabels(plantCode, { signal }) -> { labels, required_for, not_required_for, suggested }",
+      "serviceFile": "src/services/domain-configuration/common/connectorsService.js",
+      "proxyRoute": "src/app/api/domain-configuration/connectors/labels/route.js -> createProxy({ backend: 'DOMAIN_CONFIGURATION', path: '/connectors/labels', methods: ['GET'] })",
+      "queryHook": "src/components/admin/_queries/useConnectorLabels.js — key queryKeys.domainConfig.connector.labels(plant), staleTime 5min, enabled: !!plantCode. Exposes { options, isLoading, isError, refetch, requiresLabels(connector) }. requiresLabels answers TRUE for anything not in not_required_for while the vocabulary is still unknown (loading/error), so a submit is blocked rather than sent into a 422.",
+      "consumers": [
+        "src/components/admin/FileLabelSelect.jsx (shared picker: shimmer skeleton while loading, inline retry on error, multi-select with colour dot when ready)",
+        "src/components/admin/modals/DocSourceModal.jsx (documents — picker + per-subtype submit gate)",
+        "src/components/admin/ConfigModalSap.jsx (sap — picker)",
+        "src/components/admin/ConfigModalTimeseries.jsx (timeseries — picker on both metadata and values rows)",
+        "src/components/admin/ConfigModalSimpleUpload.jsx (aif|gloc|lopc — picker)",
+        "src/components/admin/ConfigModal.jsx (footer submit gates for documents-global/sap/timeseries/feeds, driven by required_for)"
+      ],
+      "openIssues": [
+        "`suggested` is parsed but not applied — intentional (user decision), not an oversight. If pre-ticking is ever wanted, it is a one-line change in the modals' file-add handlers.",
+        "plant_code_id placement on this endpoint is unverified (see requestFields) — no live capture yet."
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/p0/cdm/pnid/upload (or equivalent — unmigrated)",
+      "description": "pnid's upload path was left exactly as-is; see src/app/api/domain-configuration/pnid/[...path]/route.js for its real proxied path. Swagger lists pnid as a valid connector value on the unified endpoint, but this app has not migrated to it (no live-tested request, explicit user decision 2026-08-17 to skip pnid for this change).",
+      "verdict": "unchanged — out of scope for the 2026-08-13 and 2026-08-17 migrations"
+    }
+  ]
+}

@@ -1,0 +1,160 @@
+{
+  "domain": "timeseries",
+  "parentDomain": "domain-configuration (CDM)",
+  "backend": "DOMAIN_CONFIGURATION",
+  "backendBasePath": "/p0/cdm",
+  "gatewayHost": "http://172.16.0.12/api/decisionops-pod1",
+  "auth": {
+    "scheme": "cookie + bearer (dual)",
+    "cookies": ["access_token", "refresh_token"],
+    "note": "Handled globally by src/proxy.js + src/app/api/_lib/proxy.js. Never add auth headers per-route."
+  },
+  "notes": [
+    "This table's endpoints split across 2 real domains: connectors/pipeline are GENERIC (shared by sap|pnid|ts|docs, stage/connector-parameterized) and already lived in src/services/domain-configuration/common/ before this table was pasted.",
+    "Only getTsContext/patchTsRows/commitTsContext are genuinely timeseries-exclusive — these moved into a new src/services/domain-configuration/timeseries/timeseriesService.js.",
+    "getCommitHistory is generic (source=ts|docs|sap|pnid) and was previously duplicated: once in documents/documentsService.js (source='docs' default) and once dead in cdm/contextService.js as getContextCommits (0 callers). Consolidated into common/commitHistoryService.js per user decision 2026-07-14.",
+    "Old contextService.js's getTsContext/commitTsContext/patchTsRows used field name `plant_code` (not `plant_code_id`) and never unwrapped the {success,message,data} envelope — meaning `data.rows` in useTsFormState.js was reading the wrong level and always fell back to an empty list. Fixed as part of this migration."
+  ],
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/p0/cdm/connectors/timeseries/upload",
+      "contentType": "multipart/form-data",
+      "description": "Upload timeseries files (CSV/XLSX/Parquet) to RustFS staging; file_type=values also ingests into IoTDB in background.",
+      "requestFields": {
+        "plant_code_id": { "placement": "form", "confirmed": true },
+        "file_type": { "placement": "form", "confirmed": true, "values": ["metadata", "values"] },
+        "files": { "placement": "form", "confirmed": true, "note": "repeatable file field" }
+      },
+      "verdict": "unchanged / already implemented",
+      "serviceFn": "uploadConnectorFile('timeseries', formData) / uploadConnectorFileWithProgress('timeseries', formData, opts)",
+      "serviceFile": "src/services/domain-configuration/common/connectorsService.js",
+      "proxyRoute": "src/app/api/timeseries/upload/route.js -> proxyToCDM(req, '/connectors/timeseries/upload')"
+    },
+    {
+      "method": "POST",
+      "path": "/p0/cdm/connectors/timeseries/connect/cloud",
+      "contentType": "application/json",
+      "description": "Run cloud connector (S3/ADLS/GCS) for timeseries files into RustFS.",
+      "requestFields": {
+        "plant_code_id": { "placement": "body", "confirmed": true },
+        "cloud_type": { "placement": "body", "confirmed": true },
+        "bucket": { "placement": "body", "confirmed": true },
+        "prefix": { "placement": "body", "confirmed": true },
+        "access_key": { "placement": "body", "confirmed": true },
+        "secret_key": { "placement": "body", "confirmed": true }
+      },
+      "verdict": "unchanged / already implemented",
+      "serviceFn": "connectConnectorCloud('timeseries', body, params)",
+      "serviceFile": "src/services/domain-configuration/common/connectorsService.js",
+      "proxyRoute": "src/app/api/timeseries/[...path]/route.js -> makeCDMHandlers('/api/connectors/timeseries')"
+    },
+    {
+      "method": "POST",
+      "path": "/p0/cdm/pipeline/run",
+      "contentType": "application/json",
+      "description": "Start a CDM pipeline stage (sap|pnid|ts|docs|full) asynchronously. stage='ts' for this domain.",
+      "requestFields": {
+        "plant_code_id": { "placement": "body", "confirmed": true },
+        "industry": { "placement": "body", "confirmed": true },
+        "stage": { "placement": "body", "confirmed": true },
+        "incremental": { "placement": "body", "confirmed": true }
+      },
+      "verdict": "unchanged / already implemented (generic, shared)",
+      "serviceFn": "runPipeline({ stage: 'ts', plant_code_id, industry, ... })",
+      "serviceFile": "src/services/domain-configuration/common/pipelineService.js",
+      "proxyRoute": "src/app/api/domain-configuration/pipeline/[...path]/route.js (moved from top-level /api/pipeline)"
+    },
+    {
+      "method": "GET",
+      "path": "/p0/cdm/pipeline/jobs/{jobId}",
+      "description": "Poll pipeline job status. Requires plant_code_id query param.",
+      "requestFields": {
+        "plant_code_id": { "placement": "query", "confirmed": true }
+      },
+      "verdict": "unchanged / already implemented (generic, shared)",
+      "serviceFn": "getPipelineJob(jobId, plantCode)",
+      "serviceFile": "src/services/domain-configuration/common/pipelineService.js",
+      "proxyRoute": "src/app/api/domain-configuration/pipeline/[...path]/route.js"
+    },
+    {
+      "method": "POST",
+      "path": "/p0/cdm/pipeline/jobs/{jobId}/cancel",
+      "description": "Cancel a running pipeline job. Requires plant_code_id query param.",
+      "requestFields": {
+        "plant_code_id": { "placement": "query", "confirmed": true }
+      },
+      "verdict": "unchanged / already implemented (generic, shared)",
+      "serviceFn": "cancelPipelineJob(jobId, plantCode)",
+      "serviceFile": "src/services/domain-configuration/common/pipelineService.js",
+      "proxyRoute": "src/app/api/domain-configuration/pipeline/[...path]/route.js"
+    },
+    {
+      "method": "GET",
+      "path": "/p0/cdm/context/getTsContext",
+      "description": "Retrieve processed timeseries tag metadata for review.",
+      "requestFields": {
+        "plant_code_id": { "placement": "query", "confirmed": true },
+        "upload_batch_id": {
+          "placement": "query",
+          "confirmed": true,
+          "note": "Table row is internally inconsistent: the top URL, the Parameters list, and the response envelope all agree on `upload_batch_id`; only one illustrative request-example line uses `batch_id` (looks like a stale copy/paste — it also mixes a different plant code). Resolved to `upload_batch_id`, matching the already-confirmed getDocsContext convention."
+        }
+      },
+      "responseEnvelope": "{success, message, data: {source, plant_code_id, upload_batch_id, scope, rows: [...]}}",
+      "verdict": "breaking (field rename + envelope was never unwrapped — real bug fix)",
+      "oldServiceFn": "cdm.getTsContext (removed) — used plant_code + batch_id, no unwrap",
+      "serviceFn": "getTsContext({ plantCode, batchId })",
+      "serviceFile": "src/services/domain-configuration/timeseries/timeseriesService.js",
+      "proxyRoute": "src/app/api/context/[...path]/route.js -> makeCDMHandlers('/api/context')",
+      "consumers": ["src/components/admin/hooks/useTsFormState.js"]
+    },
+    {
+      "method": "PATCH",
+      "path": "/p0/cdm/context/patchTsRows",
+      "contentType": "application/json",
+      "description": "Persist user edits on the Timeseries review table to processed parquet files.",
+      "requestFields": {
+        "plant_code_id": { "placement": "body", "confirmed": true },
+        "rows": { "placement": "body", "confirmed": true }
+      },
+      "verdict": "breaking (field rename plant_code -> plant_code_id)",
+      "oldServiceFn": "cdm.patchTsRows (removed) — used plant_code",
+      "serviceFn": "patchTsRows(body)",
+      "serviceFile": "src/services/domain-configuration/timeseries/timeseriesService.js",
+      "proxyRoute": "src/app/api/context/[...path]/route.js",
+      "consumers": ["none currently wired — same as patchDocsRows, edits are batched into the final commit call instead of a per-row PATCH"]
+    },
+    {
+      "method": "POST",
+      "path": "/p0/cdm/context/commitTsContext",
+      "contentType": "application/json",
+      "description": "Commit reviewed timeseries metadata to the timeseries_metadata table via UPSERT.",
+      "requestFields": {
+        "plant_code_id": { "placement": "body", "confirmed": true },
+        "batch_id": { "placement": "body", "confirmed": true, "note": "commit endpoint keeps `batch_id` (not `upload_batch_id`) — confirmed literally from the request example, unlike the sibling GET." },
+        "rows": { "placement": "body", "confirmed": true }
+      },
+      "verdict": "breaking (field rename plant_code -> plant_code_id)",
+      "oldServiceFn": "cdm.commitTsContext (removed) — used plant_code",
+      "serviceFn": "commitTsContext(body)",
+      "serviceFile": "src/services/domain-configuration/timeseries/timeseriesService.js",
+      "proxyRoute": "src/app/api/context/[...path]/route.js",
+      "consumers": ["src/components/admin/hooks/usePipelineOrchestration.js (commitTsContext)"]
+    },
+    {
+      "method": "GET",
+      "path": "/p0/cdm/context/getCommitHistory",
+      "description": "Recent commit outcomes from the durable commit_audit table. Generic across source=docs|ts|sap|pnid.",
+      "requestFields": {
+        "plant_code_id": { "placement": "query", "confirmed": true },
+        "source": { "placement": "query", "confirmed": true }
+      },
+      "verdict": "additive-safe consolidation (was duplicated: documents/documentsService.js source='docs' default + dead cdm/contextService.js getContextCommits)",
+      "serviceFn": "getCommitHistory(plantCode, source)",
+      "serviceFile": "src/services/domain-configuration/common/commitHistoryService.js",
+      "proxyRoute": "src/app/api/context/[...path]/route.js",
+      "consumers": ["none currently wired in UI for either docs or ts"]
+    }
+  ]
+}

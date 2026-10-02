@@ -1,0 +1,188 @@
+{
+  "domain": "decision-template",
+  "backend": {
+    "logicalName": "DECISION_TEMPLATE",
+    "envVar": "SERVICE_DECISION_TEMPLATE_URL",
+    "envValue": "http://172.16.0.12 (bare host, no gateway prefix — matches other decisionops-pod2 domains)",
+    "gatewayPrefix": "/api/decisionops-pod2/p1/decisionModel",
+    "resolvedBaseUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel",
+    "swaggerUrl": "http://172.16.0.12/api/decisionops-pod2/swagger",
+    "openapiJsonUrl": "http://172.16.0.12/api/decisionops-pod2/openapi.json",
+    "verifiedOn": "2026-07-15",
+    "verificationMethod": "Fetched openapi.json live via PowerShell Invoke-WebRequest and inspected paths/parameters/requestBody schemas directly (not a decoded operationId, not doc prose)."
+  },
+  "notes": [
+    "2026-08-03 snapshotOptionList KNOWN INCOMPLETE for at least one live template: template_id 53 ('abcdef', plant demo123/demo2) returns only `[\"home\"]` from snapshotOptionList, so the Template Designer's Category List sidebar correctly shows only 'Home' — confirmed NOT a frontend bug (user verified this is expected: 'backend hi galat/incomplete hai'). Category List is intentionally driven by snapshotOptionList per-template (NOT the fixed Observe/Investigate/Diagnose set from templateOptionList used in the separate Workflow Builder's 'Available Templates' panel — those two are different endpoints for different purposes, see the templateOptionList responseSchema note below; do not conflate them). If a template's ReactFlow workflow has Observe/Investigate/Diagnose feature nodes placed (visible in viewWorkflow's workflow.data array) but snapshotOptionList still omits those categories, that is a backend gap to raise with the backend team — not something to silently work around client-side by deriving categories from workflow.data instead, since that was explicitly declined as the fix here.",
+    "2026-08-03 RESPONSE ENVELOPE: the user pasted the full 14-row contract table again, this time WITH real response samples. Every endpoint in BOTH resource groups (decisionworkflow/* and assetconfig/*) documents its payload wrapped in `{ success: bool, message: string, data: <payload> }`. Swagger declares NO response schema for any of the 14 (all bare `{}`), so Swagger cannot confirm or deny this. IMPORTANT CAVEAT — this is NOT verified against a live authenticated call: openapi.json is fetchable anonymously but every real endpoint 401s without a token, and a user-supplied screenshot of the Decision Templates list page taken the same day shows rows rendering correctly (template_id 412/48/18/17/16) even though the pre-existing consumer code did a bare `Array.isArray(data)` check that would yield [] against an envelope. Those two facts CONTRADICT each other. Until a live authenticated round-trip settles it, the services unwrap defensively with `res?.data ?? res`, which returns the correct payload under BOTH shapes (a bare array/object has no `.data`, so it falls through unchanged). Do not 'simplify' that to a bare `res.data` without a live capture proving the envelope.",
+    "2026-08-03 getWorkflowList DOES return the full `workflow` object per row — confirmed in the pasted sample (each row: template_id, template_name, template_class, workflow{data,ui_nodes,ui_edges}, created_by, updated_at, created_at). An earlier note in this file assumed the list might be metadata-only and that editing off a list row could PUT an empty workflow over a saved one; that specific data-loss premise is now DISPROVEN. The Modify flow still calls viewWorkflow first (see useWorkflows.loadWorkflowForEdit) because it is the canonical single-record read and it refuses to open the builder if `workflow` is absent — a cheap guard, not a fix for a confirmed bug.",
+    "Root cause of the reported 404 on GET /api/decision/get_workflow_list: DECISION_TEMPLATE had NO entry in backends.js BACKEND_PATHS (bare host, no gateway prefix), and the route file (src/app/api/decision/[...path]/route.js) hardcoded a hand-guessed prefix '/p1_decisionmodel/decisionworkflow' (all-lowercase, underscore-joined) with snake_case leaf names (get_workflow_list, template_option_list, config_workflow). The real backend, confirmed via live openapi.json, mounts at the decisionops-pod2 gateway under the SLASH-separated, camelCase segment '/p1/decisionModel/decisionworkflow/*' with camelCase leaf op names (getWorkflowList, templateOptionList, configWorkflow). Same bug class previously seen on SYMBOLIC_AI/PLANT_GPT (missing gateway prefix) — this time compounded by wrong casing/segmentation on top.",
+    "2026-07-28: user pasted the full 'decision template' feature contract table (14 rows) covering both the already-wired /decisionworkflow endpoints (re-confirmed, unchanged) and the previously-unwired assetconfig + snapshot/viewWorkflow endpoints. That table corrected two method assumptions from the earlier unwiredEndpoints note: check_config and asset_config_option are POST (not GET as previously guessed).",
+    "The assetconfig group (/p1/decisionModel/assetconfig/*) is asset-centric, not tied to any single decision-template row: assetConfig/checkConfig/assetConfigOption all key off asset_id + plant_code_id only — there is no top-level template_id input field anywhere in the sampled request bodies. The 'by template ID' in the assetConfig description refers to a template_selection dropdown INSIDE the returned config schema (assetConfigOption's response), not a separate parameter. UI: a page-level 'Configure Asset' action on the Decision Templates list page (not a per-row action), asset_id entered as free text (no asset picker backend exists on this domain; a plant-wide asset list lives on a different backend/domain — model-studio/ml-model's getAssetList — and was deliberately NOT cross-wired here to avoid assuming those asset_id values are valid on this domain too).",
+    "2026-08-03 SECOND ENTRY POINT — the assetconfig group is now ALSO driven from /home (the CPCP Configuration dashboard), which is a different feature area on a different backend domain. Right-clicking an equipment node on the home diagram opens a ContextMenu with 'Configure <label>' and navigates to /asset-config/<label>, a full page that runs the exact same three endpoints. This is deliberate and is NOT a layering violation: services are organised by BACKEND domain, not by consuming page, so assetConfigService stays in src/services/decision-template/ and the home page simply imports it. No new proxy route was needed — src/app/api/decision-template/asset-config/[...path]/route.js already covers all three. What DID move is the UI layer, which was previously locked inside the admin route folder: useAssetConfig -> src/hooks/asset-config/useAssetConfig.js, ConfigFieldRenderer + CheckboxDropdown -> src/components/config-fields/, plus a new shared src/components/asset-config/AssetConfigForm.jsx (variant='flat' for the modal, 'cards' for the page). getCurrentUsername moved to src/lib/currentUser.js (workflowUtils.js re-exports it) so the shared hook doesn't import out of a route folder. The admin 'Configure Asset' modal was KEPT as-is per explicit user decision (2026-08-03) — it remains the only way to configure an arbitrary asset id that isn't on the pinned diagram.",
+    "2026-08-03 BUG FOUND & FIXED — assetConfigOption's response was being parsed against the WRONG shape, and the fix was driven by a real browser capture the user pasted, not by the contract table. The code read `features.config` unconditionally (`optionResult?.data?.features?.config ?? optionResult?.features?.config ?? {}`), which is shape (B), the CONFIGURED-asset shape from the 2026-07-28 doc sample. The live response for an UNCONFIGURED asset is shape (A): the groups sit directly on `features` and there is no `config` key at all. Result: `config` resolved to `{}` on every unconfigured asset, so the form silently rendered 'No configurable fields returned for this asset' instead of the template-selection dropdown — i.e. the primary path (configure a brand-new asset) never worked. Now handled by extractConfigGroups(), which detects both shapes. SECOND defect in the same code path: each group's backend-supplied `name` and `description` were being thrown away and the section heading was rendered from a humanized version of the group KEY. The backend's own copy is what the reference UI shows ('template Selection' / 'Select a template to configure the asset' — note the deliberate lowercase 't', which a humanizer would have destroyed), so the whole group object is now kept intact through state and `group.name` wins, with humanizeGroupKey only as the fallback. Keeping the group whole also means save() echoes name/description back inside `data`, matching assetConfig's documented contract ('the filled config schema returned by assetConfigOption') rather than sending a stripped-down subset — UNVERIFIED against a live save, so if the backend ever rejects the extra keys, that is the first thing to check.",
+    "2026-08-03 asset_id SOURCE on the /home entry point: the equipment node's `data.label`. This is not a preference — it's the only candidate the CPCP diagram contract offers. GET /loadDiagram's live-verified node shape (api-data/cpcp-configuration.json) is `{ id: 'node_1', data: { label: 'Pump 1', componentType: 'api_p' } }`: `id` is a synthetic per-diagram key, `componentType` is a drawing/catalog key, and `data.code` (present on catalog components) is raw SVG/TSX markup, not an asset code. There is NO asset_id field anywhere in the diagram contract. OPEN RISK, flagged rather than worked around: node labels are inline-editable on the workflow-diagram canvas (EquipmentNode.jsx), so a user renaming a node silently changes the asset_id this flow sends. If the backend needs a stable asset key, the diagram contract has to carry one — do not paper over this client-side by deriving an id from componentType.",
+    "configSnapshot (PUT / edit_snapshot) is confirmed BROKEN server-side as of the pasted sample: the response is a live Postgres error `column \"snapshot\" of relation \"decisionworkflow_registry\" does not exist`, not a success envelope. Wired anyway per explicit user decision ('Full wire (load+save)') — the Template Designer's Save button will surface this as a toast error via apiClient's existing non-2xx handling until the backend adds the column. Do not treat a failure here as a frontend bug without checking this note first.",
+    "The exact JSON shape stored under the `snapshot` field (configSnapshot payload / viewSnapshot response) is NOT confirmed by any real sample — the only sample given is a placeholder `{\"name\": \"snapshot\"}`. Frontend defined its own shape, UPDATED 2026-08-03 when per-category grid sizing (GridSizeControl) was added: `{ [categoryKey]: { gridSize: { rows, cols }, widgets: [{ id, typeId, row, col, rowSpan, colSpan }, ...] } }` — previously just the bare widgets array (no gridSize wrapper); useTemplateDesigner.normalizeCategoryEntry accepts BOTH shapes on load (old bare-array treated as DEFAULT_GRID_SIZE) since no real save has ever round-tripped successfully (see the configSnapshot BROKEN note below) — there is no live data in this shape to be backward-incompatible with, but the fallback costs nothing. Treat this as UNCONFIRMED until a real backend round-trip (save then reload) is verified against a fixed backend.",
+    "plant_code_id is REQUIRED (per CLAUDE.md Rule 0 AND the backend's own Swagger 'required' list) as a query param on GET getWorkflowList/templateOptionList/snapshotFeatureList and DELETE configWorkflow/configSnapshot, and as a body field on every POST/PUT. Sourced from useApp().plantCode, threaded down as an explicit argument into every service function (never read from AppContext inside a service file)."
+  ],
+  "endpoints": [
+    {
+      "method": "GET",
+      "opId": "getWorkflowList",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/getWorkflowList",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js (catch-all, backend: DECISION_TEMPLATE, prefix: /decisionworkflow)",
+      "serviceFn": "decisionService.getWorkflows(plant_code)",
+      "params": { "plant_code_id": { "placement": "query", "required": true, "confirmed": true } },
+      "consumers": ["src/app/(admin)/admin/decision-template/hooks/useWorkflows.js"],
+      "responseSchema": "unspecified in Swagger (bare {} / any) — consumer defensively checks Array.isArray()"
+    },
+    {
+      "method": "GET",
+      "opId": "templateOptionList",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/templateOptionList",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.getTemplateOptions(plant_code)",
+      "params": { "plant_code_id": { "placement": "query", "required": true, "confirmed": true } },
+      "consumers": [
+        "src/app/(admin)/admin/decision-template/components/ui/TemplateSidebar.jsx (ReactFlow workflow builder's drag-source: observe/investigate/diagnose feature blocks)"
+      ],
+      "responseSchema": "array of { template, description, features: { [featureKey]: { name, description, configurations: [{type,name,value,description,default}] } } } — NOTE: this is the WORKFLOW builder's category list (observe/investigate/diagnose), semantically distinct from the Template Designer's snapshot categories (snapshotOptionList) even though both are called 'categories' in the UI — do not conflate the two."
+    },
+    {
+      "method": "POST",
+      "opId": "configWorkflow (create)",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/configWorkflow",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.createWorkflow(plant_code, payload)",
+      "requestBodySchema": "WorkflowCreateRequest: { template_name: string, template_class: string, created_by: string, workflow: object, plant_code_id: string } — all fields required",
+      "consumers": ["src/app/(admin)/admin/decision-template/hooks/useWorkflowBuilder.js (via utils/workflowUtils.buildSavePayload)"]
+    },
+    {
+      "method": "PUT",
+      "opId": "configWorkflow (edit)",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/configWorkflow",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.updateWorkflow(plant_code, payload)",
+      "requestBodySchema": "WorkflowUpdateRequest: { template_id: integer, workflow: object, plant_code_id: string } — all required. NOTE: buildSavePayload also sends template_name/template_class/created_by on every save (create AND edit) — backend schema doesn't require/list them for PUT but FastAPI/pydantic ignores unknown extra fields by default, not re-verified as harmless with a live edit response.",
+      "consumers": ["src/app/(admin)/admin/decision-template/hooks/useWorkflowBuilder.js"]
+    },
+    {
+      "method": "DELETE",
+      "opId": "configWorkflow (delete)",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/configWorkflow",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.deleteWorkflow(plant_code, templateId)",
+      "params": { "plant_code_id": { "placement": "query", "required": true, "confirmed": true } },
+      "requestBodySchema": "WorkflowDeleteRequest: { template_id: integer } — required, sent in body alongside the query param",
+      "consumers": ["src/app/(admin)/admin/decision-template/hooks/useWorkflows.js"]
+    },
+    {
+      "method": "POST",
+      "opId": "viewWorkflow",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/viewWorkflow",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.viewWorkflow(plant_code, templateId)",
+      "requestBodySchema": "{ template_id: integer, plant_code_id: string } — both required",
+      "consumers": [
+        "src/app/(admin)/admin/decision-template/[templateId]/_hooks/useTemplateDesigner.js — fetches canonical template_name/template_class on mount instead of relying solely on the ?name= query string (which is absent on a direct URL visit/refresh)"
+      ],
+      "responseSchema": "{ template_id, template_name, template_class, workflow: {...}, created_by, updated_at, created_at }"
+    },
+    {
+      "method": "GET",
+      "opId": "snapshotFeatureList",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/snapshotFeatureList",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.getSnapshotFeatures(plant_code)",
+      "params": { "plant_code_id": { "placement": "query", "required": true, "confirmed": true } },
+      "consumers": [
+        "src/app/(admin)/admin/decision-template/[templateId]/_hooks/useTemplateDesigner.js — widget palette catalog (replaces the previously hardcoded WIDGET_TYPES in _lib/widgetCatalog.js)"
+      ],
+      "responseSchema": "array with one entry: { template: 'snapshot', description, features: { system_alerts_field, text_field, image_field, kpi_field, table_field, chart_field, flowchart_field } } — each feature is { name, description }. Visual metadata (icon/gradient/defaultSpan) is NOT provided by the backend and is merged in client-side by _lib/widgetCatalog.js keyed off these exact feature keys, with a generic fallback for any future/unknown key."
+    },
+    {
+      "method": "POST",
+      "opId": "snapshotOptionList",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/snapshotOptionList",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.getSnapshotOptions(plant_code, templateId)",
+      "requestBodySchema": "{ template_id: integer, plant_code_id: string } — both required",
+      "consumers": [
+        "src/app/(admin)/admin/decision-template/[templateId]/_hooks/useTemplateDesigner.js — the set of pages (e.g. home/observe/diagnose) shown in CategorySidebar for THIS template's snapshot; replaces the previous (incorrect) reuse of templateOptionList's observe/investigate/diagnose workflow categories"
+      ],
+      "responseSchema": "array of plain strings, e.g. [\"home\", \"observe\", \"diagnose\"] — no descriptions, no features. Mapped client-side to CategorySidebar's { template: key } shape."
+    },
+    {
+      "method": "POST",
+      "opId": "viewSnapshot",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/viewSnapshot",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.viewSnapshot(plant_code, templateId)",
+      "requestBodySchema": "{ template_id: integer, plant_code_id: string } — both required",
+      "consumers": [
+        "src/app/(admin)/admin/decision-template/[templateId]/_hooks/useTemplateDesigner.js — loads a previously-saved grid layout on mount"
+      ],
+      "responseSchema": "sample given is a placeholder ({ template_id, snapshot: { name: 'snapshot' } }) — NOT representative of the real per-category grid shape. See top-level note about the unconfirmed `snapshot` payload shape."
+    },
+    {
+      "method": "PUT",
+      "opId": "configSnapshot (edit)",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/configSnapshot",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.updateSnapshot(plant_code, templateId, snapshot)",
+      "requestBodySchema": "{ template_id: integer, snapshot: object, plant_code_id: string } — both required. CONFIRMED BROKEN server-side as of 2026-07-28 sample (see top-level note) — column 'snapshot' does not exist yet on decisionworkflow_registry.",
+      "consumers": [
+        "src/app/(admin)/admin/decision-template/[templateId]/_hooks/useTemplateDesigner.js — Save Template button"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "opId": "configSnapshot (delete)",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/decisionworkflow/configSnapshot",
+      "localProxyRoute": "src/app/api/decision-template/[...path]/route.js",
+      "serviceFn": "decisionService.deleteSnapshot(plant_code, templateId)",
+      "params": { "plant_code_id": { "placement": "query", "required": true, "confirmed": true } },
+      "requestBodySchema": "{ template_id: integer } — required, sent in body alongside the query param",
+      "consumers": ["not yet wired to any UI action — service function exists for future use (e.g. a 'Reset Layout' button)"]
+    },
+    {
+      "method": "POST",
+      "opId": "assetConfig",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/assetconfig/assetConfig",
+      "localProxyRoute": "src/app/api/decision-template/asset-config/[...path]/route.js (catch-all, backend: DECISION_TEMPLATE, prefix: /assetconfig)",
+      "serviceFn": "assetConfigService.createAssetConfig(plant_code, { assetId, createdBy, config })",
+      "requestBodySchema": "{ data: object (the filled config schema returned by assetConfigOption), asset_id: string, created_by: string, plant_code_id: string } — all required. No template_id field — template selection lives inside `data.template_selection`.",
+      "consumers": [
+        "src/hooks/asset-config/useAssetConfig.js — save(); shared by both entry points below",
+        "src/app/(admin)/admin/decision-template/components/AssetConfigModal.jsx — 'Save Configuration' (modal, free-text asset id)",
+        "src/app/(dashboard)/asset-config/[assetId]/page.jsx — 'Save Configure' (full page, asset id from the URL)"
+      ]
+    },
+    {
+      "method": "POST",
+      "opId": "checkConfig",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/assetconfig/checkConfig",
+      "localProxyRoute": "src/app/api/decision-template/asset-config/[...path]/route.js",
+      "serviceFn": "assetConfigService.checkAssetConfig(plant_code, assetId)",
+      "requestBodySchema": "{ asset_id: string, plant_code_id: string } — both required. Corrected from an earlier guess of GET — the pasted 2026-07-28 sample confirms POST.",
+      "consumers": [
+        "src/hooks/asset-config/useAssetConfig.js — loadConfig() step 1; drives the 'already configured / not configured yet' banner in both the admin modal and /asset-config/[assetId]. Failures are swallowed (.catch(() => null)) — an unreachable checkConfig must not block the form from loading."
+      ]
+    },
+    {
+      "method": "POST",
+      "opId": "assetConfigOption",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod2/p1/decisionModel/assetconfig/assetConfigOption",
+      "localProxyRoute": "src/app/api/decision-template/asset-config/[...path]/route.js",
+      "serviceFn": "assetConfigService.getAssetConfigOptions(plant_code, assetId)",
+      "requestBodySchema": "{ asset_id: string, plant_code_id: string } — both required. Corrected from an earlier guess of GET — the pasted 2026-07-28 sample confirms POST.",
+      "consumers": [
+        "src/hooks/asset-config/useAssetConfig.js — loadConfig() step 2; returns the config form schema (default template_selection dropdown if unconfigured, else the full saved feature config). Seeds each field with `userValue: default`, then renders through src/components/asset-config/AssetConfigForm.jsx -> src/components/config-fields/ConfigFieldRenderer.jsx.",
+        "src/app/(admin)/admin/decision-template/components/AssetConfigModal.jsx — variant='flat', loads on the Load button",
+        "src/app/(dashboard)/asset-config/[assetId]/page.jsx — variant='cards', autoLoad on mount from the URL param"
+      ],
+      "responseSchema": "TWO SHAPES, undeclared — the response carries no flag saying which one you got, so the client must detect it (see extractConfigGroups in src/hooks/asset-config/useAssetConfig.js).\n\n(A) UNCONFIGURED asset — LIVE-CAPTURED 2026-08-03 from the browser (user pasted the real DevTools object). The groups ARE `features`, each carrying its own display copy:\n  { success, message, data: { status: 'success', features: {\n      template_selection: { name: 'template Selection', description: 'Select a template to configure the asset', configurations: [...] },\n      observe:            { name: 'observe',            description: 'Observe the asset',                     configurations: [...] }\n  } } }\n\n(B) CONFIGURED asset — from the 2026-07-28 contract table (NOT independently live-verified). The groups move under `features.config` and `features` itself becomes saved-record metadata:\n  { status, features: { config_id, template_id, asset_id, config: { template_selection: { configurations: [{ default }] } }, created_by, created_at, updated_at } }\n\nDetection rule implemented: prefer `features.config` when it is an object, else treat `features` as the group map; in BOTH cases keep only entries whose `configurations` is an array (that array test, not a metadata-key denylist, is what filters out config_id/template_id/asset_id/created_by/created_at/updated_at — so a newly added metadata key cannot leak in as an empty section)."
+    }
+  ],
+  "authScheme": "Bearer + Cookie access_token, injected globally by src/app/api/_lib/proxy.js forward() — no per-route auth code needed (Swagger declares access_token as an optional cookie param on the GET endpoints, consistent with every other domain on these gateways)."
+}

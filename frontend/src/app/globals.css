@@ -1,0 +1,767 @@
+@import "tailwindcss";
+
+/* ─── Dark mode: add `dark` class to <html> to activate ─── */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ═══════════════════════════════════════════════════════════
+   DESIGN TOKENS — light mode defaults
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  /* Surfaces */
+  --do-canvas:    #f8fafc;   /* app-level background     (slate-50)  */
+  --do-surface:   #ffffff;   /* card / panel surface     (white)     */
+  --do-surface-2: #f1f5f9;   /* nested / inset surface   (slate-100) */
+
+  /* Text */
+  --do-text-1: #0f172a;      /* primary                  (slate-900) */
+  --do-text-2: #1e293b;      /* secondary                (slate-800) */
+  --do-text-3: #64748b;      /* muted                    (slate-500) */
+  --do-text-4: #94a3b8;      /* subtle / placeholder     (slate-400) */
+
+  /* Border */
+  --do-border:   #e2e8f0;    /* default                  (slate-200) */
+  --do-border-2: #cbd5e1;    /* strong                   (slate-300) */
+
+  /* Brand */
+  --do-brand:       #2563eb; /* primary action            (blue-600)  */
+  --do-brand-hover: #1d4ed8; /* hover                     (blue-700)  */
+  --do-brand-muted: #eff6ff; /* tinted background         (blue-50)   */
+
+  /* Status */
+  --do-success: #10b981;     /* emerald-500 */
+  --do-warning: #f59e0b;     /* amber-500   */
+  --do-danger:  #f43f5e;     /* rose-500    */
+  --do-info:    #0ea5e9;     /* sky-500     */
+
+  /* Highlight — attention-grabbing CTA accent, distinct from --do-brand.
+     Status-invariant like the block above: defined once, not overridden per variant. */
+  --do-highlight:       #7c3aed; /* violet-600 */
+  --do-highlight-hover: #6d28d9; /* violet-700 */
+
+  /* Scroll thumb (light) */
+  --do-scroll-thumb:       #e2e8f0;
+  --do-scroll-thumb-hover: #94a3b8;
+
+  /* Skeleton shimmer sheen (light) */
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.85);
+
+  /* Charts */
+  --do-chart-1: #2563eb; /* blue-600 */
+  --do-chart-2: #dc2626; /* red-600 */
+  --do-chart-3: #16a34a; /* green-600 */
+  --do-chart-4: #ca8a04; /* yellow-600 */
+  --do-chart-5: #9333ea; /* purple-600 */
+
+  /* Customization: geometry + font scale (Settings → Interface) */
+  --do-radius: 0.5rem;
+  --do-font-scale: 1;
+  --do-line-height: 1.55;
+  --do-letter-spacing: 0em;
+}
+
+/* ─── Dark mode overrides ─── */
+.dark {
+  --do-canvas:    #0f172a;   /* slate-900 */
+  --do-surface:   #1e293b;   /* slate-800 */
+  --do-surface-2: #334155;   /* slate-700 */
+
+  --do-text-1: #f1f5f9;      /* slate-100 */
+  --do-text-2: #e2e8f0;      /* slate-200 */
+  --do-text-3: #94a3b8;      /* slate-400 */
+  --do-text-4: #64748b;      /* slate-500 */
+
+  --do-border:   #334155;    /* slate-700 */
+  --do-border-2: #475569;    /* slate-600 */
+
+  --do-brand:       #3b82f6; /* blue-500  */
+  --do-brand-hover: #2563eb; /* blue-600  */
+  --do-brand-muted: #172554; /* blue-950  */
+
+  --do-scroll-thumb:       #334155;
+  --do-scroll-thumb-hover: #475569;
+
+  /* Charts — professional muted palette for dark theme */
+  --do-chart-1: #60a5fa; /* blue-400    — calm blue, on-brand       */
+  --do-chart-2: #f87171; /* red-400     — soft coral, not jarring   */
+  --do-chart-3: #34d399; /* emerald-400 — muted teal-green          */
+  --do-chart-4: #fbbf24; /* amber-400   — warm gold, readable       */
+  --do-chart-5: #a78bfa; /* violet-400  — soft purple               */
+
+  /* Skeleton shimmer sheen (dark) */
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.14);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   THEME VARIANTS — 5 additional light + 5 additional dark.
+   `light` = :root defaults above. `slate-dark` = .dark defaults above.
+   Each block overrides neutrals only — --do-success/warning/danger/info
+   stay defined once in :root and are NOT redefined here, so status
+   colors read identically across every variant (operator safety rule).
+   hc-light/hc-dark are the sole exception: they bump status contrast.
+   ═══════════════════════════════════════════════════════════ */
+
+/* ─── Light: Soft Gray — admin & report reading ─── */
+[data-theme="soft-gray"] {
+  --do-canvas:    #f1f5f9;
+  --do-surface:   #ffffff;
+  --do-surface-2: #e2e8f0;
+  --do-text-1: #0f172a;
+  --do-text-2: #1e293b;
+  --do-text-3: #64748b;
+  --do-text-4: #94a3b8;
+  --do-border:   #e2e8f0;
+  --do-border-2: #cbd5e1;
+  --do-scroll-thumb:       #cbd5e1;
+  --do-scroll-thumb-hover: #94a3b8;
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.85);
+}
+
+/* ─── Light: Warm Ivory — warm-toned, reduced harshness ─── */
+[data-theme="warm-ivory"] {
+  --do-canvas:    #faf9f7;
+  --do-surface:   #ffffff;
+  --do-surface-2: #f3f1ec;
+  --do-text-1: #292420;
+  --do-text-2: #44403c;
+  --do-text-3: #78716c;
+  --do-text-4: #a8a29e;
+  --do-border:   #e7e3db;
+  --do-border-2: #d6d0c4;
+  --do-scroll-thumb:       #e7e3db;
+  --do-scroll-thumb-hover: #a8a29e;
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.9);
+}
+
+/* ─── Light: Glassmorphism — executive dashboards (pair with blur toggle) ─── */
+[data-theme="glass-light"] {
+  --do-canvas:    #eef1fb;
+  --do-surface:   rgba(255, 255, 255, 0.70);
+  --do-surface-2: rgba(255, 255, 255, 0.42);
+  --do-text-1: #1e2337;
+  --do-text-2: #33395a;
+  --do-text-3: #6b7290;
+  --do-text-4: #9298b0;
+  --do-border:   rgba(148, 163, 184, 0.35);
+  --do-border-2: rgba(100, 116, 139, 0.45);
+  --do-scroll-thumb:       rgba(148, 163, 184, 0.5);
+  --do-scroll-thumb-hover: rgba(100, 116, 139, 0.7);
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.9);
+}
+
+/* ─── Light: Apple-Inspired — premium consumer-grade feel ─── */
+[data-theme="apple"] {
+  --do-canvas:    #f5f5f7;
+  --do-surface:   #ffffff;
+  --do-surface-2: #ececee;
+  --do-text-1: #1d1d1f;
+  --do-text-2: #3a3a3c;
+  --do-text-3: #6e6e73;
+  --do-text-4: #a1a1a6;
+  --do-border:   #e5e5e7;
+  --do-border-2: #d2d2d7;
+  --do-scroll-thumb:       #d2d2d7;
+  --do-scroll-thumb-hover: #a1a1a6;
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.9);
+}
+
+/* ─── Light: High Contrast — outdoor tablets, max readability ─── */
+[data-theme="hc-light"] {
+  --do-canvas:    #ffffff;
+  --do-surface:   #ffffff;
+  --do-surface-2: #f0f0f0;
+  --do-text-1: #000000;
+  --do-text-2: #000000;
+  --do-text-3: #3f3f3f;
+  --do-text-4: #5c5c5c;
+  --do-border:   #1a1a1a;
+  --do-border-2: #000000;
+  --do-scroll-thumb:       #000000;
+  --do-scroll-thumb-hover: #3f3f3f;
+  --do-skeleton-sheen: rgba(0, 0, 0, 0.08);
+  /* Accessibility exception: bumped for outdoor-glare contrast */
+  --do-success: #067647;
+  --do-warning: #92400e;
+  --do-danger:  #b91c1c;
+  --do-info:    #0369a1;
+}
+
+/* ─── Dark: Midnight OLED — dark control rooms, OLED tablets ─── */
+[data-theme="midnight"] {
+  --do-canvas:    #000000;
+  --do-surface:   #0a0a0a;
+  --do-surface-2: #161616;
+  --do-text-1: #f5f5f5;
+  --do-text-2: #d4d4d4;
+  --do-text-3: #8a8a8a;
+  --do-text-4: #5c5c5c;
+  --do-border:   #1f1f1f;
+  --do-border-2: #2e2e2e;
+  --do-scroll-thumb:       #1f1f1f;
+  --do-scroll-thumb-hover: #3a3a3a;
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.06);
+}
+
+/* ─── Dark: Developer — engineers monitoring logs ─── */
+[data-theme="github"] {
+  --do-canvas:    #0d1117;
+  --do-surface:   #161b22;
+  --do-surface-2: #21262d;
+  --do-text-1: #e6edf3;
+  --do-text-2: #c9d1d9;
+  --do-text-3: #8b949e;
+  --do-text-4: #6e7681;
+  --do-border:   #30363d;
+  --do-border-2: #3d444d;
+  --do-scroll-thumb:       #30363d;
+  --do-scroll-thumb-hover: #484f58;
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.07);
+}
+
+/* ─── Dark: Soft Dark — 12-hour shifts, easy on the eyes ─── */
+[data-theme="soft-dark"] {
+  --do-canvas:    #1c1c1e;
+  --do-surface:   #2c2c2e;
+  --do-surface-2: #3a3a3c;
+  --do-text-1: #f2f2f7;
+  --do-text-2: #e5e5ea;
+  --do-text-3: #98989d;
+  --do-text-4: #6e6e73;
+  --do-border:   #38383a;
+  --do-border-2: #48484a;
+  --do-scroll-thumb:       #48484a;
+  --do-scroll-thumb-hover: #636366;
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.08);
+}
+
+/* ─── Dark: High Contrast — accessibility, neon alerts ─── */
+[data-theme="hc-dark"] {
+  --do-canvas:    #09090b;
+  --do-surface:   #09090b;
+  --do-surface-2: #18181b;
+  --do-text-1: #ffffff;
+  --do-text-2: #ffffff;
+  --do-text-3: #d4d4d8;
+  --do-text-4: #a1a1aa;
+  --do-border:   #f4f4f5;
+  --do-border-2: #ffffff;
+  --do-scroll-thumb:       #f4f4f5;
+  --do-scroll-thumb-hover: #ffffff;
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.15);
+  /* Accessibility exception: bumped for neon-alert visibility */
+  --do-success: #22c55e;
+  --do-warning: #fbbf24;
+  --do-danger:  #ff3b5c;
+  --do-info:    #38bdf8;
+}
+
+/* ─── Dark: Glassmorphism — management presentations (pair with blur toggle) ─── */
+[data-theme="glass-dark"] {
+  --do-canvas:    #0f1623;
+  --do-surface:   rgba(30, 41, 59, 0.55);
+  --do-surface-2: rgba(51, 65, 85, 0.4);
+  --do-text-1: #f1f5f9;
+  --do-text-2: #e2e8f0;
+  --do-text-3: #94a3b8;
+  --do-text-4: #64748b;
+  --do-border:   rgba(148, 163, 184, 0.18);
+  --do-border-2: rgba(148, 163, 184, 0.3);
+  --do-scroll-thumb:       rgba(148, 163, 184, 0.3);
+  --do-scroll-thumb-hover: rgba(148, 163, 184, 0.5);
+  --do-skeleton-sheen: rgba(255, 255, 255, 0.1);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TAILWIND THEME — semantic colors (dynamic via CSS vars)
+   Using @theme inline so Tailwind emits var(--do-*) in output,
+   enabling automatic light/dark switching without extra classes.
+   ═══════════════════════════════════════════════════════════ */
+@theme inline {
+  /* Surfaces */
+  --color-canvas:    var(--do-canvas);
+  --color-surface:   var(--do-surface);
+  --color-surface-2: var(--do-surface-2);
+
+  /* Text */
+  --color-text-primary:   var(--do-text-1);
+  --color-text-secondary: var(--do-text-2);
+  --color-text-muted:     var(--do-text-3);
+  --color-text-subtle:    var(--do-text-4);
+
+  /* Border */
+  --color-border:        var(--do-border);
+  --color-border-strong: var(--do-border-2);
+
+  /* Brand */
+  --color-brand:       var(--do-brand);
+  --color-brand-hover: var(--do-brand-hover);
+  --color-brand-muted: var(--do-brand-muted);
+
+  /* Status */
+  --color-success: var(--do-success);
+  --color-warning: var(--do-warning);
+  --color-danger:  var(--do-danger);
+  --color-info:    var(--do-info);
+
+  /* Highlight */
+  --color-highlight:       var(--do-highlight);
+  --color-highlight-hover: var(--do-highlight-hover);
+
+  /* Charts */
+  --color-chart-1: var(--do-chart-1);
+  --color-chart-2: var(--do-chart-2);
+  --color-chart-3: var(--do-chart-3);
+  --color-chart-4: var(--do-chart-4);
+  --color-chart-5: var(--do-chart-5);
+
+  /* Geometry (Border Radius) — dynamically scaled by --do-radius (Settings → Geometry) */
+  --radius:      calc(var(--do-radius) * 0.5);   /* base (rounded) */
+  --radius-sm:   calc(var(--do-radius) * 0.25);  /* rounded-sm */
+  --radius-md:   calc(var(--do-radius) * 0.75);  /* rounded-md */
+  --radius-lg:   var(--do-radius);               /* rounded-lg */
+  --radius-xl:   calc(var(--do-radius) * 1.5);   /* rounded-xl */
+  --radius-2xl:  calc(var(--do-radius) * 2);     /* rounded-2xl */
+  --radius-3xl:  calc(var(--do-radius) * 3);     /* rounded-3xl */
+  --radius-4xl:  calc(var(--do-radius) * 4);     /* rounded-4xl */
+
+  /* Type scale — scaled at runtime via --do-font-scale (Settings → Font Size).
+     Overrides standard Tailwind text size variables so standard classes (text-sm, text-base) scale. */
+  --text-xs:   calc(0.75rem * var(--do-font-scale));
+  --text-sm:   calc(0.875rem * var(--do-font-scale));
+  --text-base: calc(1rem * var(--do-font-scale));
+  --text-body-sm: calc(0.875rem * var(--do-font-scale));
+  --text-label:   calc(0.75rem * var(--do-font-scale));
+  --text-tiny:    calc(0.625rem * var(--do-font-scale));
+  --text-caption: calc(0.6875rem * var(--do-font-scale));
+  --text-2xs:     calc(0.5625rem * var(--do-font-scale));
+  --text-lg:   calc(1.125rem * var(--do-font-scale));
+  --text-xl:   calc(1.25rem * var(--do-font-scale));
+  --text-2xl:  calc(1.5rem * var(--do-font-scale));
+  --text-3xl:  calc(1.875rem * var(--do-font-scale));
+  --text-4xl:  calc(2.25rem * var(--do-font-scale));
+}
+
+/* ═══════════════════════════════════════════════════════════
+   TAILWIND THEME — static design tokens
+   ═══════════════════════════════════════════════════════════ */
+@theme {
+  /* Overlay / always-dark surface (modal backdrops, dark-style toolbars/buttons).
+     Static — does NOT adapt to light/dark mode by design. */
+  --color-overlay:       #0f172a;  /* slate-950 */
+  --color-overlay-hover: #1e293b;  /* slate-800 */
+
+  /* Toast status accents — Toast cards sit on the themed `surface` token
+     (adapts to all 12 variants), but these accent colors stay fixed rather
+     than using --do-success/warning/danger/info: they're mid-tone "400"
+     shades deliberately chosen to read clearly at low opacity on BOTH a
+     light and a dark surface, so the same tint works across every variant
+     without per-theme tuning. */
+  --color-toast-success: #34d399;  /* emerald-400 */
+  --color-toast-danger:  #fb7185;  /* rose-400    */
+  --color-toast-warning: #fbbf24;  /* amber-400   */
+  --color-toast-info:    #38bdf8;  /* sky-400     */
+  --color-toast-sparkle: #e879f9;  /* fuchsia-400 — decorative, non-status */
+
+  /* Typography */
+  --font-helvetica: "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif;
+  --font-sans: var(--font-helvetica), "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+
+  /* Custom shadows (additive — don't override Tailwind's shadow-sm/md/lg) */
+  --shadow-card:  0 1px 3px 0 rgba(0,0,0,0.05), 0 1px 2px -1px rgba(0,0,0,0.05);
+  --shadow-panel: 0 4px 6px -1px rgba(0,0,0,0.06), 0 2px 4px -2px rgba(0,0,0,0.04);
+  /* Soft, diffuse "floating material" elevation — macOS/iOS notification-style
+     shadow (large soft blur, low opacity) rather than a tight card shadow. */
+  --shadow-toast: 0 16px 32px -12px rgba(0,0,0,0.18), 0 4px 12px -4px rgba(0,0,0,0.10);
+  --shadow-modal: 0 20px 40px -12px rgba(15,23,42,0.12);
+  --shadow-brand: 0 4px 20px rgba(37,99,235,0.25);
+  --shadow-login: 0 32px 80px -20px rgba(15,23,42,0.12);
+
+  /* Animation durations */
+  --duration-fast:   150ms;
+  --duration-base:   300ms;
+  --duration-slow:   500ms;
+  --duration-slower: 700ms;
+
+  /* Easing curves */
+  --ease-default: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring:  cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BASE STYLES
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  background-color: var(--do-canvas);
+  color: var(--do-text-1);
+}
+
+html, body {
+  height: 100% !important;
+  overflow: hidden !important;
+}
+
+/* Enforce uniform font family globally */
+body, text, tspan, input, button, select, th, td, span, div, h1, h2, h3, p {
+  font-family: var(--font-sans), "Helvetica Neue", Helvetica, Arial, "Liberation Sans", sans-serif !important;
+}
+
+/* Base typography rhythm (Settings → Interface → Typography). Set on body
+   only (not !important) so it's the inherited default — any element with its
+   own Tailwind leading- or tracking- utility still wins locally via normal
+   CSS specificity, exactly like --do-font-scale vs per-element text sizes. */
+body {
+  line-height: var(--do-line-height);
+  letter-spacing: var(--do-letter-spacing);
+}
+
+/* Tabular numbers (Settings → Interface → Typography) — keeps digit widths
+   aligned across KPI tiles, tables & trend readouts when enabled. */
+[data-tabular-nums="1"] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Hide browser default password reveal and clear buttons */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
+
+/* Align native datetime-local picker chrome with dark mode */
+.dark input[type="datetime-local"] {
+  color-scheme: dark;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   REACT-GRID-LAYOUT — resize handle
+   ═══════════════════════════════════════════════════════════ */
+/* Base handle style (common to all handles) */
+.react-grid-item > .react-resizable-handle {
+  background-image: none !important;
+  width: 20px;
+  height: 20px;
+  position: absolute;
+  bottom: 0;
+  z-index: 20;
+}
+
+/* South East (bottom-right) specific style */
+.react-grid-item > .react-resizable-handle-se {
+  right: 0;
+  cursor: se-resize;
+}
+
+.react-grid-item > .react-resizable-handle-se::after {
+  content: "";
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid var(--do-border-2);
+  border-bottom: 2px solid var(--do-border-2);
+  border-radius: 1px;
+}
+
+.react-grid-item > .react-resizable-handle-se:hover::after {
+  border-color: var(--do-text-4);
+}
+
+/* South West (bottom-left) specific style */
+.react-grid-item > .react-resizable-handle-sw {
+  left: 0;
+  cursor: sw-resize;
+}
+
+.react-grid-item > .react-resizable-handle-sw::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  bottom: 6px;
+  width: 8px;
+  height: 8px;
+  border-left: 2px solid var(--do-border-2);
+  border-bottom: 2px solid var(--do-border-2);
+  border-radius: 1px;
+}
+
+.react-grid-item > .react-resizable-handle-sw:hover::after {
+  border-color: var(--do-text-4);
+}
+
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+
+.react-grid-item.resizing {
+  z-index: 100;
+  will-change: width, height;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 100;
+  will-change: transform;
+}
+
+.react-grid-item.react-draggable-dragging .ui-chart-container,
+.react-grid-item.resizing .ui-chart-container {
+  pointer-events: none;
+}
+
+.react-grid-placeholder {
+  background: var(--do-brand) !important;
+  opacity: 0.2 !important;
+  border-radius: 0.75rem !important;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SCROLLBAR UTILITIES
+   ═══════════════════════════════════════════════════════════ */
+
+/* Sidebar — 3 px, very subtle */
+.sidebar-nav::-webkit-scrollbar {
+  width: 3px;
+}
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--do-scroll-thumb);
+  border-radius: 999px;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--do-scroll-thumb-hover);
+}
+
+/* Hide scrollbar completely but allow scrolling */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BREADCRUMB — staggered slide-in entrance
+   ═══════════════════════════════════════════════════════════ */
+@keyframes crumb-in {
+  from { opacity: 0; transform: translateX(-6px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.crumb-animate {
+  opacity: 0;
+  animation: crumb-in 180ms var(--ease-default) both;
+  animation-delay: var(--crumb-delay, 0ms);
+}
+
+/* Thin scrollbar — reusable for panels, modals, editors */
+.thin-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.thin-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--do-scroll-thumb);
+  border-radius: 999px;
+}
+.thin-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--do-scroll-thumb-hover);
+}
+
+/* Custom scrollbar — for drawers, modals, dropdowns */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: var(--do-border-strong, #cbd5e1);
+  border-radius: 999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: var(--do-text-subtle, #94a3b8);
+}
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: var(--do-border-strong, #cbd5e1) transparent;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SKELETON — theme-aware shimmer for loading placeholders.
+   Base color comes from the `surface-2` token (auto light/dark);
+   the sheen sweeps a token-driven gradient across it.
+   ═══════════════════════════════════════════════════════════ */
+@keyframes skeleton-shimmer {
+  from { transform: translateX(-150%); }
+  to   { transform: translateX(150%); }
+}
+
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent  0%,
+    transparent 38%,
+    var(--do-skeleton-sheen) 50%,
+    transparent 62%,
+    transparent 100%
+  );
+  animation: skeleton-shimmer 1.5s linear infinite;
+  animation-delay: var(--sk-delay, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after { animation: none; }
+}
+
+/* Suppress focus outline on Recharts charts when clicked */
+.recharts-wrapper:focus,
+.recharts-wrapper *:focus {
+  outline: none !important;
+}
+
+/* ── Canvas dot-grid pattern (used in PipelineBuilder & VisualPipelineCanvas) ── */
+.bg-dot-grid {
+  background-image: radial-gradient(#94a3b8 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  opacity: 0.8;
+}
+
+/* ── Landing page dot-grid pattern ── */
+.bg-landing-grid {
+  background-image: radial-gradient(#64748b 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+/* ── TimeSelector dropdown entrance animation ── */
+@keyframes timeSelectorIn {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+.animate-time-selector-in {
+  animation: timeSelectorIn 0.16s ease both;
+}
+
+/* ── Liquid Glass dropdown sheen — one-shot specular sweep played once when
+   a panel using the "Liquid Glass" Dropdown Animation Style (Settings →
+   Interface → Effects & Motion) opens. See useMenuMotion's buildPanelMotion,
+   which sets `sheen: true` only for that style. The panel itself (Select,
+   ProfileMenu, PlantSwitcher) is always position: fixed/absolute, so it's
+   already a valid containing block for this inset-0 overlay. ── */
+@keyframes liquidSheen {
+  0%   { transform: translateX(-120%) skewX(-20deg); opacity: 0; }
+  15%  { opacity: 0.55; }
+  55%  { opacity: 0.22; }
+  100% { transform: translateX(220%) skewX(-20deg); opacity: 0; }
+}
+.liquid-glass-sheen {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.liquid-glass-sheen::after {
+  content: "";
+  position: absolute;
+  top: -20%;
+  bottom: -20%;
+  left: 0;
+  width: 45%;
+  background: linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.55) 45%, transparent 100%);
+  animation: liquidSheen 0.65s ease-out both;
+}
+.dark .liquid-glass-sheen::after {
+  background: linear-gradient(115deg, transparent 0%, rgba(255,255,255,0.16) 45%, transparent 100%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .liquid-glass-sheen::after { animation: none; display: none; }
+}
+
+/* ── ConfirmDialog icon halo — soft breathing glow behind the intent icon ── */
+@keyframes confirmHaloPulse {
+  0%, 100% { transform: scale(1);     opacity: 0.5; }
+  50%      { transform: scale(1.22);  opacity: 0.9; }
+}
+.animate-confirm-halo {
+  animation: confirmHaloPulse 2.2s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-confirm-halo { animation: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   DENSITY — compact / normal (default) / comfortable
+   data-density is set on <html> by CustomizationContext.
+   Overrides Tailwind's base --spacing to scale p-*, m-*, gap-*, w-*, h-*
+   ═══════════════════════════════════════════════════════════ */
+[data-density="compact"] {
+  --spacing: 0.2rem; /* 80% scale of default 0.25rem */
+}
+
+[data-density="comfortable"] {
+  --spacing: 0.3rem; /* 120% scale of default 0.25rem */
+}
+
+/* ═══════════════════════════════════════════════════════════
+   MOTION — reduced / off
+   CustomizationContext overrides --duration-* on :root via JS;
+   the @media rule below is the OS-level safety net.
+   ═══════════════════════════════════════════════════════════ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast:   0ms;
+    --duration-base:   0ms;
+    --duration-slow:   0ms;
+    --duration-slower: 0ms;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════
+   BLUR & GLASS INTENSITY — 0–150% slider (Settings → Interface)
+   --do-blur-scale is set on <html> by CustomizationContext and scales
+   Tailwind's own --blur-* theme tokens below. Every backdrop-blur- / blur-
+   utility in the app already renders as `blur(var(--blur-md))` etc (Tailwind
+   v4's own compiled output), so overriding these tokens here — as plain,
+   unlayered declarations, which always beat Tailwind's @layer theme
+   declarations regardless of source order — scales glass panels AND soft
+   blur glows app-wide from this ONE variable. No per-component overrides
+   needed, and no refactor of existing backdrop-blur- / blur- classNames.
+   data-blur="0" (0%) additionally zeroes every other backdrop-filter
+   channel for a true, zero-cost disable rather than a merely-invisible
+   blur(0px).
+   ═══════════════════════════════════════════════════════════ */
+:root {
+  --do-blur-scale: 1;
+  --blur-xs:  calc(4px  * var(--do-blur-scale));
+  --blur-sm:  calc(8px  * var(--do-blur-scale));
+  --blur-md:  calc(12px * var(--do-blur-scale));
+  --blur-lg:  calc(16px * var(--do-blur-scale));
+  --blur-xl:  calc(24px * var(--do-blur-scale));
+  --blur-2xl: calc(40px * var(--do-blur-scale));
+  --blur-3xl: calc(64px * var(--do-blur-scale));
+}
+
+[data-blur="0"] .glass,
+[data-blur="0"] [class*="backdrop-blur"] {
+  --tw-backdrop-blur: initial;
+  --tw-backdrop-brightness: initial;
+  --tw-backdrop-contrast: initial;
+  --tw-backdrop-grayscale: initial;
+  --tw-backdrop-hue-rotate: initial;
+  --tw-backdrop-invert: initial;
+  --tw-backdrop-opacity: initial;
+  --tw-backdrop-saturate: initial;
+  --tw-backdrop-sepia: initial;
+}

@@ -1,0 +1,128 @@
+{
+  "domain": "log-management",
+  "lastUpdated": "2026-07-20",
+  "backend": {
+    "logicalName": "DOMAIN_CONFIGURATION",
+    "envVar": "SERVICE_DOMAIN_CONFIGURATION_URL",
+    "envVarValue": "bare host only, e.g. http://172.16.0.12 (no path) — same physical backend as CDM config/context/data/ontology",
+    "gatewayPrefix": "/api/decisionops-pod1/p0/cdm (via next.config.js rewrite, NOT backends.js — see routing note)",
+    "resolvedBaseUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/logs",
+    "routing": "Does NOT go through _lib/proxy.js's createProxy/createCatchAllProxy or a BACKEND_PATHS entry. Routed by the next.config.js rewrite `{ source: '/api/log-management/:path*', destination: '${CDM_API}/logs/:path*' }` (next.config.js line ~64), where CDM_API = SERVICE_DOMAIN_CONFIGURATION_URL + '/api/decisionops-pod1/p0/cdm'. The backend's real upstream segment is still literally `/logs` (unchanged) — only our LOCAL /api/* convention was renamed 2026-07-20 from /api/logs to /api/log-management, to match the already-renamed service folder (src/services/log-management/) and admin page (/admin/log-management). A dynamic catch-all also exists at src/app/api/log-management/[...path]/route.js (makeCDMHandlers, backend DOMAIN_CONFIGURATION) as a fallback for when SERVICE_DOMAIN_CONFIGURATION_URL is unset and rewrites() returns []; per CLAUDE.md 'do not touch the CDM next.config.js rewrites', this specific line is the one deliberate, user-requested exception — every other CDM rewrite line was left untouched.",
+    "responseEnvelope": "{ success: boolean, message: string, data: object }",
+    "authHeadersDocumented": ["access_token (cookie)"],
+    "authHeadersActuallySent": "Authorization: Bearer <token> AND Cookie: access_token=<token> — injected globally by src/proxy.js + src/app/api/_lib/proxy.js, never per-route.",
+    "plantField": {
+      "name": "plant_code_id",
+      "note": "Query param on all 5 endpoints (all GET) per CLAUDE.md Rule 0. Never a custom X-PlantCodeId header. Renamed from the pre-refactor `plant_code` used on getActivity/getLogsSummary, and newly added to getLogsList/getLogs/getLogEvents which previously sent no plant field at all."
+    },
+    "notes": [
+      "LOG_MANAGEMENT is also a defined logical backend key in backends.js (SERVICE_LOG_MANAGEMENT_URL) but is dead/unused — no route resolves it. The real logs domain lives on DOMAIN_CONFIGURATION via the CDM rewrite, confirmed by literal URL match against the pasted table."
+    ]
+  },
+  "serviceFiles": [
+    "src/services/log-management/logsService.js (consolidated 2026-07-14 — previously split between this thin wrapper and src/services/cdm/logsService.js, which is now deleted; cdm/index.js barrel no longer re-exports logs)"
+  ],
+  "proxyRoutes": [
+    "next.config.js rewrite '/api/log-management/:path*' (primary)",
+    "src/app/api/log-management/[...path]/route.js (fallback only, unreachable while the rewrite is active)"
+  ],
+  "localProxyBase": "/api/log-management",
+  "consumers": {
+    "components": [
+      "src/components/admin/views/LogsManagement.jsx (getActivity, getLogEvents, getLogsSummary — plant_code_id threaded from useApp().plantCode, 2026-07-14)",
+      "src/components/admin/views/PipelineLogsViewer.jsx (getLogs — plant_code_id threaded from useApp().plantCode, 2026-07-14)",
+      "src/components/admin/views/hooks/useConnectorActivity.js (fetchMultipleLogs — plant_code_id threaded from useApp().plantCode, 2026-07-14)",
+      "src/components/admin/views/hooks/useDataActivity.js (fetchActivityLog — plant_code_id threaded from useApp().plantCode, 2026-07-14)"
+    ],
+    "services": [
+      "src/services/data-activity/activityService.js (fetchActivityLog, fetchAllActivityLogs wrap getLogs)"
+    ]
+  },
+  "endpoints": [
+    {
+      "name": "getLogsList",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/logs",
+      "localProxyRoute": "/api/log-management",
+      "serviceFunction": "logsService.getLogsList(plantCodeId)",
+      "description": "List all pipeline log files that can be served, with size and existence flag.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string (required per doc)" },
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Logs fetched successfully",
+        "data": { "logs": [{ "key": "api", "filename": "api.log", "exists": true, "size_bytes": 84231 }, { "key": "sap", "filename": "sap.log", "exists": false, "size_bytes": 0 }] }
+      },
+      "notes": "Zero UI consumers as of 2026-07-14 (user decision: API-layer-only wiring, no new UI in this pass — service function updated to the new contract and exported, not wired into PipelineLogsViewer's static PIPELINE_LOG_LABELS selector)."
+    },
+    {
+      "name": "getLogEvents",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/logs/events",
+      "localProxyRoute": "/api/log-management/events",
+      "serviceFunction": "logsService.getLogEvents({ plantCodeId, source, level, q, limit })",
+      "description": "Parsed, filterable log events. Supports source (comma-joined), level, q, limit.",
+      "contentType": null,
+      "requestParams": { "source": "string, comma-joined (optional)", "level": "string (optional)", "q": "string (optional)", "limit": "number, default 500", "plant_code_id": "string (required per doc)" },
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Events fetched successfully",
+        "data": { "events": [{ "ts": "2026-07-07T12:13:45Z", "level": "ERROR", "source": "api", "message": "Failed to connect to DB" }], "total": 42, "sources": ["api", "sap"], "histogram": [], "facets": {} }
+      },
+      "notes": "Previously sent NO plant field at all. LogsManagement.jsx's LogsTab already consumes events/facets by the same field names post-unwrap; total/histogram/sources are available but not yet surfaced in UI."
+    },
+    {
+      "name": "getActivity",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/logs/activity",
+      "localProxyRoute": "/api/log-management/activity",
+      "serviceFunction": "logsService.getActivity({ plantCodeId, limit })",
+      "description": "Unified activity feed from audit tables, pipeline jobs and events.",
+      "contentType": null,
+      "requestParams": { "limit": "number, default 100", "plant_code_id": "string (required per doc)" },
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Activity fetched successfully",
+        "data": { "activity": [{ "ts": "2026-07-07T11:55:12Z", "actor": "jdoe", "action": "commit" }], "total": 87 }
+      },
+      "notes": "Field renamed from plant_code to plant_code_id (was already being sent under the old name, just wrong key)."
+    },
+    {
+      "name": "getLogsSummary",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/logs/summary",
+      "localProxyRoute": "/api/log-management/summary",
+      "serviceFunction": "logsService.getLogsSummary({ plantCodeId })",
+      "description": "Pre-aggregated dashboard statistics.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string (required per doc)" },
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Summary fetched successfully",
+        "data": { "today": "2026-07-07", "events_by_level": { "ERROR": 4 }, "jobs": { "completed": 12, "failed": 2, "total": 14 }, "commits": { "today": 3, "total": 57 } }
+      },
+      "notes": "Field renamed from plant_code to plant_code_id."
+    },
+    {
+      "name": "getLogs",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/logs/{logKey}",
+      "localProxyRoute": "/api/log-management/{logKey}",
+      "serviceFunction": "logsService.getLogs(logKey, lines, plantCodeId)",
+      "description": "Return the last N lines of a specific log file.",
+      "contentType": null,
+      "requestParams": { "lines": "number, default 500", "plant_code_id": "string (required per doc)" },
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "Log fetched successfully",
+        "data": { "log": "api", "filename": "api.log", "lines": ["..."], "total_lines": 84231, "showing": 200 }
+      },
+      "notes": "Previously sent NO plant field at all. `showing` is a new response field, not yet consumed by any UI (PipelineLogsViewer only reads lines/total_lines)."
+    }
+  ]
+}

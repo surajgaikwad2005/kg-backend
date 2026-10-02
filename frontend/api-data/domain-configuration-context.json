@@ -1,0 +1,247 @@
+{
+  "domain": "domain-configuration-context",
+  "lastUpdated": "2026-08-17",
+  "backend": {
+    "logicalName": "DOMAIN_CONFIGURATION",
+    "envVar": "SERVICE_DOMAIN_CONFIGURATION_URL",
+    "gatewayPrefix": "/p0/cdm",
+    "gatewayHost": "http://127.0.0.1:8000",
+    "responseEnvelope": "{ success: boolean, message: string, data: object } — unwrap() in domain-configuration/common/contextService.js strips it.",
+    "authHeadersActuallySent": "Authorization: Bearer <token> AND Cookie: access_token=<token> — injected globally by src/proxy.js + src/app/api/_lib/proxy.js, never per-route. Pasted table's Headers column listed 'access_token:' / 'refresh_token:' — read as the cookie-based auth this domain already uses, not a new scheme."
+  },
+  "migration": {
+    "reason": "User pasted the backend's new unified commit endpoint (POST /p0/cdm/context/commit) with the note that the four legacy per-connector commit endpoints (commitPnidContext/commitDocsContext/commitTsContext/commitSapContext) remain live on the backend but must be removed from this app's usage.",
+    "removedServiceExports": [
+      "domain-configuration/common/contextService.js -> commitPnidContext(body)",
+      "domain-configuration/common/contextService.js -> commitSapContext(body)",
+      "domain-configuration/documents/documentsService.js -> commitDocsContext(body)",
+      "domain-configuration/timeseries/timeseriesService.js -> commitTsContext(body)"
+    ],
+    "removedProxyRoutes": [
+      "src/app/api/domain-configuration/pnid/commit-context/route.js",
+      "src/app/api/domain-configuration/sap/commit-context/route.js",
+      "src/app/api/domain-configuration/documents/commit-context/route.js",
+      "src/app/api/domain-configuration/timeseries/commit-context/route.js"
+    ],
+    "removedDeadCode": [
+      "src/components/admin/_queries/useDsiQueries.js -> useCommitPnidContext/useCommitDocsContext/useCommitTsContext/useCommitSapContext (zero consumers, wrapped the now-removed functions above; documented as dead/broken-contract in docs/tanstackquery/code-review-findings.md #6)"
+    ],
+    "newServiceExport": "domain-configuration/common/contextService.js -> commitContext(connector, body)",
+    "newProxyRoute": "src/app/api/domain-configuration/context/commit/route.js -> POST /context/commit",
+    "consumersUpdated": [
+      "src/components/admin/hooks/usePipelineOrchestration.js — commitPidContext/commitDocsContext/commitTsContext/commitSapContext (the exposed handler names on AdminPanelContext are UNCHANGED; only their internal service call switched to cdm.commitContext(connector, body))"
+    ]
+  },
+  "migrationRead": {
+    "reason": "User pasted the backend's new unified read endpoint (GET /p0/cdm/context/get) plus a full per-connector parameter matrix, with the note that the four legacy per-connector read endpoints (getPnidContext/getDocsContext/getTsContext/getSapContext) remain live on the backend but must be removed from this app's usage — same pattern as the earlier commit/patch unification above.",
+    "removedServiceExports": [
+      "domain-configuration/common/contextService.js -> getPnidContext({ plantCode, batchId, files, jobId })",
+      "domain-configuration/common/contextService.js -> getSapContext({ table, plantCode, batchId })",
+      "domain-configuration/documents/documentsService.js -> getDocsContext({ plantCode, batchId, jobId }) (+ its groupRowsByCategory helper, moved into useDsiQueries.js's selectDocsContext as a TanStack Query `select`, per CLAUDE.md rule 54)",
+      "domain-configuration/timeseries/timeseriesService.js -> getTsContext({ plantCode, batchId }) — this was the ONLY export left in the timeseries domain folder, so the whole folder (timeseriesService.js + index.js) was deleted, not just the function"
+    ],
+    "removedProxyRoutes": [
+      "src/app/api/domain-configuration/pnid/get-context/route.js",
+      "src/app/api/domain-configuration/sap/get-context/route.js",
+      "src/app/api/domain-configuration/documents/get-context/route.js",
+      "src/app/api/domain-configuration/timeseries/get-context/route.js"
+    ],
+    "newServiceExport": "domain-configuration/common/contextService.js -> getContext({ connector, plantCode, batchId, files, docTypes, sourceFile, table, page, pageSize, jobId })",
+    "newProxyRoute": "src/app/api/domain-configuration/context/get/route.js -> GET /context/get",
+    "consumersUpdated": [
+      "src/components/admin/_queries/useDsiQueries.js — usePnidContext/useFetchPnidContext/useDocsContext/useTsContext/useSapContext (hook names + signatures UNCHANGED for their callers; each now calls cdm.getContext({ connector: '<x>', ...params }) instead of a per-connector service function)"
+    ],
+    "consumersNotChanged": [
+      "src/components/admin/hooks/usePnidFormState.js, useDocsFormState.js, useTsFormState.js, useSapFormState.js — none needed edits; they already call the useDsiQueries.js hooks above, which absorbed the URL/service change internally. Response-shape parsing (equipment_pid/equipment_connectivity/pnid_images for pnid, rows/columns for sap+ts, rows_by_category for docs) was deliberately left untouched — see openIssues below."
+    ]
+  },
+  "endpoints": [
+    {
+      "name": "getContext",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/context/get",
+      "localProxyRoute": "/api/domain-configuration/context/get (src/app/api/domain-configuration/context/get/route.js)",
+      "serviceFunction": "domain-configuration/common/contextService.js -> getContext({ connector, plantCode, ... })",
+      "contentType": "n/a (GET, query params only)",
+      "description": "Get staged review rows for any connector. One endpoint for all seven connectors (2026-08-17: grew from four to seven — pnid/documents/sap/timeseries plus the SAP-linked findings feeds aif/gloc/lopc), the same way POST /context/commit serves every stage. `connector` query param selects the flow. Supersedes getPnidContext/getDocsContext/getTsContext/getSapContext for this app (backend keeps those alive but unused here).",
+      "queryParams": {
+        "connector": "'pnid' | 'documents' | 'timeseries' | 'sap' | 'aif' | 'gloc' | 'lopc' (required) — first four confirmed by user, same enum as commitContext/getConnectorJob; aif/gloc/lopc added 2026-08-17",
+        "plant_code_id": "string (required, all 7 connectors)",
+        "upload_batch_id": "required for pnid/documents/timeseries; not used for sap/aif/gloc/lopc",
+        "files": "required for pnid/documents; not used for timeseries/sap/aif/gloc/lopc",
+        "doc_types": "required for documents only",
+        "source_file": "required for timeseries only",
+        "table": "required for sap only",
+        "page": "required for documents/timeseries/sap/aif/gloc/lopc; not used for pnid",
+        "page_size": "required for documents/timeseries/sap/aif/gloc/lopc; not used for pnid",
+        "pipeline_job_id": "optional for pnid/documents; not used for timeseries/sap/aif/gloc/lopc",
+        "unmatched_only": "boolean, optional — NEW 2026-08-17. Confirmed live for the findings connectors via `GET /context/get?connector=lopc&unmatched_only=true`; restricts `rows` to those whose `asset_match_method` is still 'unmatched' against the equipment identity graph. Not confirmed for pnid/documents/sap/timeseries."
+      },
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "string, e.g. 'Timeseries context retrieved successfully' / 'LOPC context retrieved successfully'",
+        "data": {
+          "source": "string, e.g. 'ts' / 'lopc'",
+          "connector": "string, echoes the request connector — NEW/confirmed 2026-08-17 on the lopc example; not previously confirmed present for timeseries",
+          "table": "string, backing table name e.g. 'containment_event_lopc' — NEW 2026-08-17, confirmed for lopc only",
+          "plant_code_id": "string — previously confirmed present for timeseries; ABSENT from the top level of the lopc example's `data` (though each row inside `rows[]` still carries its own plant_code_id) — unconfirmed whether dropped for findings connectors specifically or just not in this excerpt",
+          "upload_batch_id": "string | null — previously confirmed present for timeseries; ABSENT from the top level of the lopc example (same caveat as plant_code_id above)",
+          "scope": "string, e.g. 'none' — previously confirmed present for timeseries; ABSENT from the lopc example",
+          "rows": "array — confirmed shape for connector='timeseries' (flat tag-metadata rows: ts_uid, tag_name, iotdb_tag_id, description, unit, equipment_id, op_limit_*, safety_limit_*, trip_limit_*, source_file, confidence, updated_at, is_active, upload_batch_id, ...) and now also for connector='lopc' (flat incident rows: region, reference_no, incident_title, field_name, location, event_month/year/date, description, incident_classification, medium_classification, release_category, leak_amount_kg, leak_rate, equipment_type, valve_size, component_type, corrosion_related, damage_mechanism, secondary_damage_mechanism, remarks, risk_factor, program_sprint, leak_amount_raw, normalized_asset, asset_match_method, asset_match_confidence, asset_mapped, source_record_id, source_file, plant_code_id, source_system, upload_batch_id, confidence, updated_at, is_active, equipment_uid — see liveExamples below)",
+          "total": "number, total row count — NEW 2026-08-17, confirmed for lopc (18)",
+          "columns": "array of column-name strings — NEW 2026-08-17, confirmed for lopc (37 total)",
+          "identity": "NEW 2026-08-17, confirmed for lopc — { matched: number, unmatched: number, methods: { <method_name>: number, ... } } equipment-matching summary, e.g. { matched: 0, unmatched: 18, methods: { unmatched: 18 } }",
+          "pagination": "object { page, page_size, total_items, total_pages, has_more, next_cursor } — NEW 2026-08-17, confirmed for connector='lopc'. Real server-side pagination metadata; not yet wired into any UI (all four existing review views still fetch once at page_size=500 and page/search client-side, see openIssues below)",
+          "is_empty": "boolean — NEW 2026-08-17, confirmed for lopc (false)"
+        }
+      },
+      "liveExamples": [
+        {
+          "connector": "lopc",
+          "date": "2026-08-17",
+          "request": "GET /context/get?connector=lopc&plant_code_id=DELTA_CAPTURE&unmatched_only=true&page_size=2",
+          "responseStatus": 200,
+          "responseBody": {
+            "success": true,
+            "message": "LOPC context retrieved successfully",
+            "data": {
+              "source": "lopc",
+              "connector": "lopc",
+              "table": "containment_event_lopc",
+              "rows": [
+                {
+                  "region": "SKA", "reference_no": "", "incident_title": "BNP-B: Low pressure header leak at SI injection point",
+                  "field_name": "Baronia", "location": "BNP-B", "event_month": "January", "event_year": "2020", "event_date": "2020-01-04",
+                  "description": "(truncated in the pasted source — full incident narrative)",
+                  "incident_classification": "slight_release", "medium_classification": "Full Well Stream", "release_category": "Flammable",
+                  "leak_amount_kg": "", "leak_rate": "", "equipment_type": "Piping", "valve_size": "", "component_type": "Valve body",
+                  "corrosion_related": "True", "damage_mechanism": "Corrosion", "secondary_damage_mechanism": "Injection Point Corrosion",
+                  "remarks": "", "risk_factor": "Maintenance - Inspection", "program_sprint": "Sprint #6: Corrosion", "leak_amount_raw": "nan",
+                  "normalized_asset": "", "asset_match_method": "unmatched", "asset_match_confidence": "0.0", "asset_mapped": "False",
+                  "source_record_id": "2020-01-04|BNP-B: Low pressure header leak at SI injection point",
+                  "source_file": "COPY LOPC Database Baronia 170326 - Copy.xlsx", "plant_code_id": "DELTA_CAPTURE", "source_system": "LOPC",
+                  "upload_batch_id": "40afce66-beb9-4685-a3d5-60e0d6b4eddd", "confidence": "0.0", "updated_at": "2026-08-14 09:20:20.434383+00:00",
+                  "is_active": "True", "equipment_uid": ""
+                },
+                "… 1 more row (page_size=2)"
+              ],
+              "total": 18,
+              "columns": ["region", "… 36 more"],
+              "identity": { "matched": 0, "unmatched": 18, "methods": { "unmatched": 18 } },
+              "pagination": { "page": 1, "page_size": 2, "total_items": 18, "total_pages": 9, "has_more": true, "next_cursor": null },
+              "is_empty": false
+            }
+          },
+          "note": "Every row carries its own plant_code_id/upload_batch_id (inside rows[]) even though those fields — along with `scope` — are absent from the top level of `data` here, unlike the previously-documented timeseries shape. Suggests those three top-level fields may just not apply to findings connectors rather than being dropped from the contract generally, but that's not confirmed."
+        }
+      ],
+      "openIssues": [
+        "Pasted example was given for connector='timeseries' ONLY (truncated mid-row-object) and now also connector='lopc' (2026-08-17, see liveExamples). Response shape for pnid/documents/sap under THIS unified endpoint remains UNCONFIRMED — implemented on the conservative assumption that each of those four connectors' response is whatever shape it always was, just reachable through this one router, now possibly with the new table/total/columns/identity/pagination/is_empty fields layered on top (unconfirmed for them). Concretely: pnid's consumer (usePnidFormState.js) still reads data.equipment_pid / data.equipment_connectivity / data.pnid_images / data.connectivity_by_file (falling back to data.rows only for the connectivity table, which was already a pre-existing defensive fallback); sap's consumer (useSapFormState.js) still reads data.rows / data.columns; docs' consumer relies on data.rows with a per-row `category` field (grouped client-side via selectDocsContext). NONE of these three were verified live against the new response shape. If P&ID review renders empty images/connectivity, or SAP/Docs tables render empty, after adopting this update, that's the first place to look.",
+        "`source_file` (required for timeseries) has NO current value source anywhere in this app's timeseries upload/pipeline flow — usePipelineOrchestration.js's `extractCtxParams` only derives `files`/`docTypes` for the pnid/docs stages, nothing for ts, and the ts pipeline-trigger body (see useRunPipeline.js) carries no file name at all. Implemented as: omitted when unavailable (apiClient drops undefined query params) rather than guessed. This may 422 on the backend if truly enforced — needs either a backend confirmation that it's optional in practice, or new frontend plumbing to track the uploaded TS file name per batch (mirroring how pnid already tracks `admin_pnid_files_by_batch::<batchId>` in localStorage).",
+        "`page`/`page_size` are marked required for documents/timeseries/sap/aif/gloc/lopc, but NONE of the four existing review views (DocsReviewView/TsReviewView/SapTablesView, and pnid has no pagination at all) implement server-driven pagination today — they fetch once and page/search client-side over the full result. Implemented as: getContext() defaults page=1, pageSize=500 so today's 'fetch everything at once' UX is preserved without touching the four view components. A plant with more than 500 rows for a connector/table will be silently truncated until real server-side pagination is built — this is a known follow-up, not yet flagged to product. The new `pagination.has_more`/`next_cursor`/`total_pages` response fields (confirmed for lopc) could drive real server-side pagination when this is revisited.",
+        "connector value 'documents' (not 'docs') confirmed directly by the user for this endpoint, matching the enum already used by commitContext/getConnectorJob.",
+        "aif/gloc/lopc read support (connector value, pagination, unmatched_only) is wired into getContext() but has NO consumer yet — useConfigModalActions.handleFeedSubmit uploads these feeds with no review screen (see its own doc comment), and useDsiQueries.js has no usePnidContext-style hook for them (nor a queryKeys.domainConfig.context key). Latent/documented capability only until a findings review screen is built."
+      ],
+      "consumers": [
+        "src/components/admin/_queries/useDsiQueries.js (usePnidContext, useFetchPnidContext, useDocsContext, useTsContext, useSapContext) — no aif/gloc/lopc consumer exists yet, see openIssues"
+      ]
+    },
+    {
+      "name": "commitContext",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/context/commit",
+      "localProxyRoute": "/api/domain-configuration/context/commit (src/app/api/domain-configuration/context/commit/route.js)",
+      "serviceFunction": "domain-configuration/common/contextService.js -> commitContext(connector, body)",
+      "contentType": "application/json",
+      "description": "Commit reviewed rows for any connector. One endpoint for all seven connectors (2026-08-17: grew from four to seven — pnid/documents/sap/timeseries plus the SAP-linked feed connectors aif/gloc/lopc, same day those three were added as native `connector` values on the upload endpoint, see cdm-connectors-upload.json); `connector` selects the internal flow. Supersedes commitPnidContext/commitDocsContext/commitTsContext/commitSapContext for this app (backend keeps those alive, and per the user's 2026-08-17 note they remain available/unchanged, but this app calls only the unified endpoint). `rows` (and each connector's other row/table payload field) is now OPTIONAL — omit it and the backend commits whatever rows were already reviewed/staged for that batch, instead of requiring the full payload posted back.",
+      "requestBody": {
+        "connector": "'pnid' | 'documents' | 'sap' | 'timeseries' | 'aif' | 'gloc' | 'lopc' (required) — first four confirmed live elsewhere in this app for getConnectorJob (see connectorsService.js / useConnectorJob.js and the queryKeys.domainConfig.connector comment); aif/gloc/lopc confirmed 2026-08-17 (gloc via a live commit example below, aif/lopc inferred from the same 'seven connectors' framing and the identical enum already confirmed on the upload endpoint — not independently commit-tested)",
+        "plant_code_id": "string (required) — confirmed for gloc; see plantCodeId below for the pnid/sap asymmetry",
+        "rows (or connector-specific payload)": "OPTIONAL as of 2026-08-17 — omit entirely and the backend auto-commits the rows already reviewed via getContext/patchContextRows for that connector+batch. When sent, still whatever fields that connector's commit previously required: `rows` for docs/timeseries, `equipment_pid`/`equipment_connectivity` for pnid, `tables` for sap. Not yet confirmed whether aif/gloc/lopc even HAVE a row-payload form, since the one live example omits it."
+      },
+      "plantCodeId": { "placement": "body", "confirmed": "partial — see openIssues" },
+      "responseBody": {
+        "success": true,
+        "message": "string, e.g. 'Timeseries context committed successfully' / 'GLOC context committed successfully'",
+        "data": {
+          "status": "committed",
+          "commit_id": "number",
+          "table": "string",
+          "rows_inserted": "number",
+          "rows_updated": "number",
+          "rows_noop": "number",
+          "rows_written": "number",
+          "connector": "string, echoes the request connector",
+          "tables": [{ "table": "string, formatted '<connector> → <table_name>' e.g. 'gloc → containment_event_gloc' (confirmed 2026-08-17; not confirmed whether pnid/sap/documents/timeseries responses use this same '<connector> → <table>' format or a bare table name as previously documented)", "rows_written": "number", "rows_updated": "number", "rows_skipped": "number", "rows_rejected": "number" }],
+          "total_rows_written": "number",
+          "rows_replaced": "number — NEW field confirmed 2026-08-17 on the gloc example (value 0 in that example, meaning not yet exercised); not present in the earlier timeseries example, unclear if that means it's new-to-the-response-shape generally or specific to connectors that support row replacement",
+          "committed_by": "string",
+          "rejected_rows": "array"
+        }
+      },
+      "liveExamples": [
+        {
+          "connector": "gloc",
+          "date": "2026-08-17",
+          "requestBody": { "connector": "gloc", "plant_code_id": "DELTA_CAPTURE" },
+          "responseStatus": 200,
+          "responseBody": {
+            "success": true,
+            "message": "GLOC context committed successfully",
+            "data": {
+              "status": "committed", "commit_id": 3,
+              "tables": [{ "table": "gloc → containment_event_gloc", "rows_written": 0, "rows_updated": 0, "rows_skipped": 0, "rows_rejected": 0 }],
+              "rows_written": 361, "total_rows_written": 361, "rows_replaced": 0,
+              "connector": "gloc", "committed_by": "system", "rejected_rows": []
+            }
+          },
+          "note": "Body carries ONLY connector + plant_code_id — no rows/batch_id. rows_written (361) came entirely from server-side state; nothing in the request told it how many rows to commit. The per-table entry inside `tables` still shows 0s across the board, so the top-level rows_written/total_rows_written (both 361) are the authoritative counts here, not the tables[] breakdown — unclear why they diverge."
+        }
+      ],
+      "openIssues": [
+        "The user's paste referenced '204 and 409 rows above' from a larger source table that was NOT included in what was pasted here — this app has NO confirmed shape for what a 204 or a 409 response from this endpoint looks like (e.g. is 409 'nothing staged to commit' / 'already committed'? does 204 mean zero rows committed but success?). Not implemented defensively for either since the shape is unknown — flag to the user for the next paste covering those rows.",
+        "aif and lopc are assumed to share gloc's new 'omit rows, auto-commit staged rows' behavior purely because the source description says 'all seven connectors' as one undifferentiated group — NEITHER was independently commit-tested. If aif/lopc commits are added to this app, verify live rather than assuming parity with gloc.",
+        "No consumer in this app calls commitContext with a feed connector (aif/gloc/lopc) yet — useConfigModalActions.handleFeedSubmit uploads these feeds but deliberately has no review/commit screen (see its own doc comment). This endpoint update is latent/documented capability only until a feed review UI is built.",
+        "Pasted example was given for connector='timeseries' ONLY, and truncated mid-row-object (cuts off at \"normalized_asse...\"). Its body was { connector, plant_code_id, rows } — an exact match for the OLD commitTsContext body (plant_code_id, batch_id, rows) plus the new connector field, EXCEPT batch_id was not visible before truncation, so we cannot confirm from the example whether batch_id is still sent. Kept batch_id in the outgoing body for timeseries/documents (safe superset — extra field, not a removed one) pending confirmation.",
+        "PNID and SAP's OLD commit bodies do NOT use a flat `rows` array — pnid sends { plant_code, batch_id, equipment_pid, equipment_connectivity } and sap sends { plant_code, batch_id, tables: {<table_name>: rows[]} }. The confirmed examples (timeseries with rows, gloc without) do not prove whether the unified endpoint expects these two connectors to also flatten into `rows`, or whether it's a routing-only consolidation that keeps each connector's existing field shape. IMPLEMENTED AS: routing-only consolidation — pnid/sap keep their existing field names verbatim, just posted to the new path with `connector` added. This is the conservative reading of 'connector selects the flow' (a thin router in front of the same legacy handlers) and matches what the real examples show. NOT yet verified live for pnid/sap — flag if commits for those two connectors start failing.",
+        "PNID and SAP also still send `plant_code` (not `plant_code_id`) in their body, unchanged from before this migration — this mismatches the `plant_code_id` field name confirmed for timeseries/documents/gloc. This asymmetry pre-dates this migration (commitPnidContext's old doc comment already claimed `plant_code`, differing from getPnidContext's confirmed `plant_code_id`) and was not touched here since no new evidence was given for these two connectors specifically.",
+        "connector value strings for pnid/documents/sap ('pnid', 'documents', 'sap') are NOT from the pasted spec (which only confirmed 'timeseries' originally, now 'gloc') — they're inferred from the identical, already-backend-confirmed enum used by getConnectorJob elsewhere in this app (see connectorsService.js comment: \"generic, parameterized by connector ∈ pnid|documents|sap|timeseries\"). High confidence, but this is a different endpoint family (job polling, not commit) — worth a quick live check on first real pnid/documents/sap commit after this change."
+      ],
+      "consumers": ["src/components/admin/hooks/usePipelineOrchestration.js (commitPidContext, commitDocsContext, commitTsContext, commitSapContext) — no aif/gloc/lopc consumer exists yet, see openIssues"]
+    },
+    {
+      "name": "patchContextRows",
+      "method": "PATCH",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/context/rows",
+      "localProxyRoute": "/api/domain-configuration/context/rows (src/app/api/domain-configuration/context/rows/route.js)",
+      "serviceFunction": "domain-configuration/common/contextService.js -> patchContextRows(connector, body)",
+      "contentType": "application/json",
+      "description": "Persist review row edits/deletions for any connector. One endpoint for all four connectors (`pnid`, `documents`, `timeseries`, `sap`).",
+      "requestBody": {
+        "connector": "'pnid' | 'documents' | 'sap' | 'timeseries' (required)",
+        "plant_code_id": "string (required)",
+        "plant_code": "string",
+        "batch_id": "string (optional)",
+        "rows": "array of updated row objects or deleted row objects"
+      },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "responseBody": {
+        "success": true,
+        "message": "string, e.g. 'Timeseries rows patched successfully'",
+        "data": {
+          "status": "ok",
+          "written": "object",
+          "row_count": "number"
+        }
+      },
+      "consumers": [
+        "src/components/admin/hooks/useContextRowPersistence.js",
+        "src/components/admin/views/TsReviewView.jsx",
+        "src/components/admin/views/DocsReviewView.jsx",
+        "src/components/admin/views/PidReviewView.jsx",
+        "src/components/admin/views/SapMappingView.jsx"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,167 @@
+{
+  "domain": "domain-configuration-documents",
+  "lastUpdated": "2026-07-14",
+  "backend": {
+    "logicalName": "DOMAIN_CONFIGURATION",
+    "envVar": "SERVICE_DOMAIN_CONFIGURATION_URL",
+    "gatewayPrefix": "/api/decisionops-pod1/p0/cdm",
+    "responseEnvelope": "{ success: boolean, message: string, data: object } — NEW in this refactor. The prior contract returned flat payloads; every service function in domain-configuration/common and domain-configuration/documents now calls a local unwrap() helper (defensive: no-op if a response isn't actually wrapped) to strip this envelope so consumer code keeps reading flat fields (job_id, rows, categories, ...).",
+    "authHeadersActuallySent": "Authorization: Bearer <token> AND Cookie: access_token=<token> — injected globally by src/proxy.js + src/app/api/_lib/proxy.js, never per-route.",
+    "plantField": {
+      "name": "plant_code_id",
+      "note": "Renamed from plant_code across every endpoint in this domain (body for POST/PATCH, query for GET/DELETE). Confirmed via every request/response example in the pasted table — no exceptions found."
+    }
+  },
+  "serviceLayerReorg": {
+    "reason": "User directive mid-review: consolidate refactored document APIs into src/services/domain-configuration/documents (docs-exclusive) and src/services/domain-configuration/common (shared across sap/pnid/ts/docs). Sibling domain-configuration/{p&id,sap,timeseries} folders existed as empty placeholders before this session; timeseries was filled in during this same session by a concurrent edit, p&id/sap remain out of scope.",
+    "newFiles": [
+      "src/services/domain-configuration/common/pipelineService.js — moved wholesale from cdm/pipelineService.js (runPipeline, getPipelineJob, getPipelineJobs, cancelPipelineJob, getPipelineOutputs, previewPipelineOutput); stage-agnostic, used by every CDM stage",
+      "src/services/domain-configuration/common/connectorsService.js — moved wholesale from cdm/connectorsService.js (uploadConnectorFile, uploadConnectorFileWithProgress, connectConnectorCloud, connectConnectorOnedrive, getConnectorJob, getConnectorJobs, getExistingPnid, getConnectorFileUrl); generic, parameterized by connector ∈ pnid|documents|sap|timeseries",
+      "src/services/domain-configuration/common/commitHistoryService.js — getCommitHistory(plantCode, source); supersedes cdm/contextService.js's getContextCommits (same endpoint, zero consumers); shared by source across every domain, not docs-exclusive",
+      "src/services/domain-configuration/common/index.js — barrel",
+      "src/services/domain-configuration/documents/documentsService.js — getDocsContext, commitDocsContext, patchDocsRows, getDocsKnowledgeGraph (moved from cdm/contextService.js's Docs section), getDocumentTypes (moved from cdm/configService.js)",
+      "src/services/domain-configuration/documents/index.js — barrel"
+    ],
+    "deletedFiles": [
+      "src/services/cdm/pipelineService.js",
+      "src/services/cdm/connectorsService.js"
+    ],
+    "trimmedFiles": [
+      "src/services/cdm/contextService.js — Docs section removed (moved to documents/); Timeseries section removed (moved to domain-configuration/timeseries/ by a concurrent edit this session); getContextCommits removed (moved to common/commitHistoryService.js); P&ID + SAP sections remain (out of scope)",
+      "src/services/cdm/configService.js — getDocumentTypes removed (moved to documents/); everything else (SAP tables, column renames, user config, frozen CDM definitions, industries) untouched",
+      "src/services/cdm/index.js — re-exports for pipelineService/connectorsService removed"
+    ]
+  },
+  "endpoints": [
+    {
+      "name": "uploadConnectorFile('documents', ...)",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/connectors/documents/upload",
+      "localProxyRoute": "/api/documents/upload (next.config.js rewrite, not a route handler)",
+      "serviceFunction": "domain-configuration/common/connectorsService.js -> uploadConnectorFile(connector, formData, plantCode)",
+      "contentType": "multipart/form-data",
+      "requestFormFields": { "plant_code_id": "string (required)", "document_type": "string (required)", "document_type_label": "string (optional)", "source_columns": "array (optional)", "files": "file(s), repeatable" },
+      "plantCodeId": { "placement": "form field", "confirmed": true },
+      "responseBody": { "success": true, "data": { "job_id": "string", "plant_code_id": "string", "document_type": "string", "files": [{ "name": "string", "size": "number", "status": "string", "flow_uid": "number", "stage": "string", "content_hash": "string" }] } },
+      "consumers": ["useDocSourceModal.js (handleDocSubmit, device tab)", "ConfigModal.jsx (handleGlobalDocSubmit, bulk upload path)"]
+    },
+    {
+      "name": "connectConnectorCloud('documents', ...)",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/connectors/documents/connect/cloud?document_type={type}",
+      "serviceFunction": "domain-configuration/common/connectorsService.js -> connectConnectorCloud(connector, body, params, plantCode)",
+      "contentType": "application/json",
+      "requestQuery": { "document_type": "string" },
+      "requestBody": { "plant_code_id": "string (required)", "cloud_type": "s3|adls|gcs", "bucket": "string", "prefix": "string", "access_key": "string", "secret_key": "string" },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "responseBody": { "success": true, "data": { "job_id": "string", "source": "string", "document_type": "string" } },
+      "consumers": ["useDocSourceModal.js (handleDocSubmit, cloud tab)"]
+    },
+    {
+      "name": "connectConnectorOnedrive('documents', ...)",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/connectors/documents/connect/oneDrive",
+      "serviceFunction": "domain-configuration/common/connectorsService.js -> connectConnectorOnedrive(connector, body, params, plantCode)",
+      "contentType": "application/json",
+      "requestBody": { "plant_code_id": "string (required)", "tenant_id": "string (required)", "client_id": "string (required)", "client_secret": "string (required)", "source_path": "string (optional)", "user_principal_name": "string (optional)", "drive_id": "string (optional)", "site_id": "string (optional)", "document_type": "string (optional)" },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "consumers": [],
+      "openIssues": ["Zero live UI consumers (verified via repo-wide grep) — no OneDrive tab/flow is wired anywhere for documents or pnid. Service function exists and is contract-correct; no UI built this pass."]
+    },
+    {
+      "name": "runPipeline",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/pipeline/run?plant_code_id={id}",
+      "serviceFunction": "domain-configuration/common/pipelineService.js -> runPipeline({ plant_code_id, ...body })",
+      "contentType": "application/json",
+      "requestBody": { "incremental": "boolean", "industry": "string", "plant_code_id": "string (required)", "stage": "sap|docs|ts|pnid|full" },
+      "plantCodeId": { "placement": "body + query", "confirmed": true },
+      "responseBody": { "success": true, "data": { "pipeline_job_id": "string", "upload_batch_id": "string", "stage": "string", "plant_code_id": "string", "industry": "string" } },
+      "openIssues": [
+        "SHARED across every CDM stage (sap/pnid/ts/docs/full), not docs-exclusive — confirmed by reading cdm/pipelineService.js in full before moving it. Renaming its response fields (job_id->pipeline_job_id, batch_id->upload_batch_id) required adding fallback aliases (not replacing) in usePipelineOrchestration.js's job-id/batch-id extraction so sap/pnid/ts polling doesn't regress.",
+        "IncrementalLoadModal.jsx had a pre-existing bug sending plant_code: selectedPlantId?.code (plant objects only ever carry .id) — fixed in the same pass since the line was already being touched for the rename (user-confirmed)."
+      ],
+      "consumers": ["useRunPipeline.js", "usePipelineOrchestration.js (triggerPipeline, commitDocsContext, commitTsContext, commitSapContext)", "IncrementalLoadModal.jsx"]
+    },
+    {
+      "name": "getPipelineJob",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/pipeline/jobs/{jobId}?plant_code_id={id}",
+      "serviceFunction": "domain-configuration/common/pipelineService.js -> getPipelineJob(jobId, plantCode)",
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": { "success": true, "data": { "pipeline_job_id": "string", "stage": "string", "plant_code_id": "string", "upload_batch_id": "string", "status": "queued|running|completed|failed|cancelled", "output_tables": [], "record_counts": {}, "total_records": "number" } },
+      "openIssues": ["Previously accepted a plantCode JS param but never sent it on the wire — now actually wired into the query string."],
+      "consumers": ["usePipelineOrchestration.js (triggerPipeline poll loop)"]
+    },
+    {
+      "name": "cancelPipelineJob",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/pipeline/jobs/{jobId}/cancel?plant_code_id={id}",
+      "serviceFunction": "domain-configuration/common/pipelineService.js -> cancelPipelineJob(jobId, plantCode)",
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "consumers": [],
+      "openIssues": ["Zero live UI consumers — no cancel button/action wired to any pipeline UI. Service function is contract-correct for whenever one is built."]
+    },
+    {
+      "name": "getDocsContext",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/context/getDocsContext?upload_batch_id={id}&pipeline_job_id={id}&plant_code_id={id}",
+      "serviceFunction": "domain-configuration/documents/documentsService.js -> getDocsContext({ plantCode, batchId, jobId })",
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": { "success": true, "data": { "source": "docs", "plant_code_id": "string", "upload_batch_id": "string", "scope": "string", "rows": [{ "document_id": "string", "title": "string", "document_type": "string", "category": "string", "equipment_tag": "string", "extracted_entities": "string", "..." : "..." }] } },
+      "openIssues": [
+        "AMBIGUITY (user-resolved 2026-07-14): the pasted doc contained two contradicting query-param examples for this endpoint — the literal request URL + response body use upload_batch_id/pipeline_job_id, while a separate illustrative line elsewhere in the same row used batch_id/doc_types (matching an auto-generated param summary). User decision: trust the literal URL+response (upload_batch_id/pipeline_job_id) since the response JSON itself echoes back the key 'upload_batch_id'. doc_types/files params dropped entirely (not present in the new contract).",
+        "RESPONSE SHAPE CHANGE (user-resolved 2026-07-14): backend now returns a flat rows[] array (each row tagged with a category field) instead of the previous rows_by_category/categories grouped shape. User decision: group by category inside documentsService.js's getDocsContext so useDocsFormState.js/DocsReviewView.jsx need zero changes."
+      ],
+      "consumers": ["useDocsFormState.js"]
+    },
+    {
+      "name": "patchDocsRows",
+      "method": "PATCH",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/context/patchDocsRows",
+      "serviceFunction": "domain-configuration/documents/documentsService.js -> patchDocsRows(body)",
+      "contentType": "application/json",
+      "requestBody": { "plant_code_id": "string (required)", "rows": "array of doc row objects" },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "consumers": [],
+      "openIssues": ["Zero live consumers — DocsReviewView.jsx's row edits are local-state-only and round-trip through commitDocsContext on save, never call this PATCH endpoint directly."]
+    },
+    {
+      "name": "commitDocsContext",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/context/commitDocsContext",
+      "serviceFunction": "domain-configuration/documents/documentsService.js -> commitDocsContext(body)",
+      "contentType": "application/json",
+      "requestBody": { "plant_code_id": "string (required)", "batch_id": "string", "rows": "array" },
+      "plantCodeId": { "placement": "body", "confirmed": true },
+      "responseBody": { "success": true, "data": { "status": "committed", "tables": [{ "table": "document_metadata", "rows_written": "number" }], "total_rows_written": "number" } },
+      "openIssues": ["Body field is batch_id (not upload_batch_id) — confirmed literally from the single, unambiguous request example for this endpoint; asymmetric with getDocsContext's query param naming but not itself ambiguous."],
+      "consumers": ["usePipelineOrchestration.js (commitDocsContext)"]
+    },
+    {
+      "name": "getDocumentTypes",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/configRouter/documentTypes?plant_code_id={id}",
+      "serviceFunction": "domain-configuration/documents/documentsService.js -> getDocumentTypes(plantCode)",
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": { "success": true, "data": { "version": "1.0", "categories": [{ "category": "string", "types": [{ "key": "string", "label": "string", "fields": [{ "name": "string", "desc": "string" }] }] }] } },
+      "openIssues": ["Previously accepted a plantCode JS param but never sent it on the wire — now actually wired into the query string. useDocsFormState.js silently falls back to the hardcoded DOC_TYPE_CATEGORIES constant if the response doesn't carry a non-empty categories array — no error surfaced to the user on backend failure."],
+      "consumers": ["useDocsFormState.js"]
+    },
+    {
+      "name": "getCommitHistory",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p0/cdm/context/getCommitHistory",
+      "serviceFunction": "domain-configuration/common/commitHistoryService.js -> getCommitHistory(plantCode, source)",
+      "requestQuery": { "plant_code_id": "string", "source": "string, e.g. docs|ts|sap|pnid" },
+      "plantCodeId": { "placement": "query", "confirmed": true },
+      "responseBody": { "success": true, "data": { "commits": [{ "commit_uid": "number", "source": "string", "plant_code_id": "string", "status": "string", "rows_written": "number", "tables": [{ "table": "string", "rows_written": "number" }], "committed_by": "string", "committed_at": "string" }] } },
+      "openIssues": [
+        "Not actually a new endpoint to this codebase — cdm/contextService.js already had an identical getContextCommits hitting this same URL (zero consumers, confirmed via grep). Superseded rather than duplicated; the old function was removed.",
+        "Generic/source-agnostic (shared across every CDM domain by the source param), so it lives in domain-configuration/common rather than documents/, matching runPipeline/connectorsService's placement.",
+        "Service + proxy wiring only per user decision 2026-07-14 — no UI panel built this pass (no consumer yet)."
+      ],
+      "consumers": []
+    }
+  ]
+}

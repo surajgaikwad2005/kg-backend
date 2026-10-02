@@ -1,0 +1,890 @@
+{
+  "domain": "agent-factory",
+  "lastUpdated": "2026-07-10",
+  "backend": {
+    "logicalName": "AGENT_FACTORY",
+    "envVar": "SERVICE_AGENT_FACTORY_URL",
+    "envVarValue": "bare host only, e.g. http://172.16.0.12 (no path)",
+    "gatewayPrefix": "/api/decisionops-pod1/p1/agentFactory",
+    "resolvedBaseUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory",
+    "backendPathsEntry": "src/app/api/_lib/backends.js -> agentFactoryPrefix() / BACKEND_PATHS",
+    "responseEnvelope": "{ success: boolean, message: string, data: object|array|null }",
+    "authHeadersDocumented": ["access_token", "refresh_token"],
+    "authHeadersActuallySent": "Authorization: Bearer <token> AND Cookie: access_token=<token> (see CLAUDE.md API rule 3) — injected globally, never per-route",
+    "plantField": {
+      "name": "plant_code_id",
+      "note": "Sent as query parameters for GET and DELETE requests, and in the body for POST and PUT requests."
+    },
+    "notes": [
+      "Catch-all proxy route (src/app/api/agent-factory/[...path]/route.js) forwards requests to the AGENT_FACTORY backend.",
+      "The proxy extracts the user identity from JWT tokens and maps it to X-User-ID header."
+    ]
+  },
+  "serviceFile": "src/services/agent-factory/agentFactoryService.js",
+  "proxyRoute": "src/app/api/agent-factory/[...path]/route.js",
+  "localProxyBase": "/api/agent-factory",
+  "endpoints": [
+    {
+      "name": "listTools",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/tools",
+      "localProxyRoute": "/api/agent-factory/tools",
+      "serviceFunction": "agentFactoryService.listTools()",
+      "description": "Retrieves the catalog of all dynamically registered analytical, correlation, frequency analysis, and plotting tools in the system.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Tools retrieved successfully.",
+        "data": [
+          {
+            "name": "stats_tool_runtime",
+            "description": "Calculate statistical summaries or retrieve values for specific telemetry points.",
+            "domain": "timeseries",
+            "parameters": {
+              "tags": "List[str]",
+              "mode": "str (summary/value)",
+              "timestamp": "Optional[str]",
+              "start_time": "Optional[str]",
+              "end_time": "Optional[str]"
+            },
+            "dependencies": [],
+            "output_schema": null,
+            "config_schema": {
+              "tags": {
+                "type": "multiselect",
+                "required": false,
+                "description": "Tags to analyze"
+              },
+              "mode": {
+                "type": "select",
+                "required": false,
+                "description": "Analysis mode (summary or value)"
+              },
+              "timestamp": {
+                "type": "datetime",
+                "required": false
+              },
+              "start_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "end_time": {
+                "type": "datetime",
+                "required": false
+              }
+            }
+          },
+          {
+            "name": "relationship_analysis_tool",
+            "description": "Analyze correlations and relationships between multiple telemetry signals.",
+            "domain": "timeseries",
+            "parameters": {
+              "tags": "List[str]",
+              "start_time": "Optional[str]",
+              "end_time": "Optional[str]",
+              "lag_seconds": "int"
+            },
+            "dependencies": [],
+            "output_schema": null,
+            "config_schema": {
+              "tags": {
+                "type": "multiselect",
+                "required": false,
+                "description": "Tags to analyze"
+              },
+              "start_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "end_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "lag_seconds": {
+                "type": "number",
+                "required": false,
+                "description": "Lag in seconds to apply between signals"
+              }
+            }
+          },
+          {
+            "name": "plot_tool_runtime",
+            "description": "Generate plotting data arrays for visualization.",
+            "domain": "timeseries",
+            "parameters": {
+              "tags": "List[str]",
+              "mode": "str (line/heatmap)",
+              "start_time": "Optional[str]",
+              "end_time": "Optional[str]",
+              "resample_rule": "Optional[str]"
+            },
+            "dependencies": [],
+            "output_schema": null,
+            "config_schema": {
+              "tags": {
+                "type": "multiselect",
+                "required": false,
+                "description": "Tags to plot"
+              },
+              "mode": {
+                "type": "select",
+                "required": false,
+                "description": "Plot type (line or heatmap)"
+              },
+              "start_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "end_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "resample_rule": {
+                "type": "text",
+                "required": false,
+                "description": "Time interval to resample data (e.g. 5min, 1h)"
+              }
+            }
+          },
+          {
+            "name": "event_analysis_tool",
+            "description": "Detect deviations or incidents outside bounds.",
+            "domain": "timeseries",
+            "parameters": {
+              "tags": "List[str]",
+              "mode": "str (incident/deviation)",
+              "lower_bound": "Optional[float]",
+              "upper_bound": "Optional[float]",
+              "window": "int",
+              "start_time": "Optional[str]",
+              "end_time": "Optional[str]",
+              "auto_bounds": "bool"
+            },
+            "dependencies": [],
+            "output_schema": null,
+            "config_schema": {
+              "tags": {
+                "type": "multiselect",
+                "required": false,
+                "description": "Tags to monitor"
+              },
+              "mode": {
+                "type": "select",
+                "required": false,
+                "description": "Analysis mode (incident or deviation)"
+              },
+              "lower_bound": {
+                "type": "number",
+                "required": false,
+                "description": "Lower bound limit"
+              },
+              "upper_bound": {
+                "type": "number",
+                "required": false,
+                "description": "Upper bound limit"
+              },
+              "window": {
+                "type": "number",
+                "required": false,
+                "description": "Minimum consecutive data points"
+              },
+              "start_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "end_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "auto_bounds": {
+                "type": "boolean",
+                "required": false,
+                "description": "Automatically determine limits if not provided"
+              }
+            }
+          },
+          {
+            "name": "frequency_analysis_tool",
+            "description": "FFT-based frequency and pattern analysis.",
+            "domain": "timeseries",
+            "parameters": {
+              "tags": "List[str]",
+              "start_time": "Optional[str]",
+              "end_time": "Optional[str]",
+              "resample_rule": "Optional[str]",
+              "top_k": "int"
+            },
+            "dependencies": [],
+            "output_schema": null,
+            "config_schema": {
+              "tags": {
+                "type": "multiselect",
+                "required": false,
+                "description": "Tags to analyze"
+              },
+              "start_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "end_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "resample_rule": {
+                "type": "text",
+                "required": false,
+                "description": "Time interval to resample data"
+              },
+              "top_k": {
+                "type": "number",
+                "required": false,
+                "description": "Number of top dominant frequencies to return"
+              }
+            }
+          },
+          {
+            "name": "event_based_rca_tool",
+            "description": "Identify signals co-deviating with a target.",
+            "domain": "timeseries",
+            "parameters": {
+              "target_tag": "str",
+              "candidate_tags": "List[str]",
+              "start_time": "Optional[str]",
+              "end_time": "Optional[str]"
+            },
+            "dependencies": [],
+            "output_schema": null,
+            "config_schema": {
+              "target_tag": {
+                "type": "text",
+                "required": true,
+                "description": "The target signal tag showing deviance"
+              },
+              "candidate_tags": {
+                "type": "multiselect",
+                "required": true,
+                "description": "Potential root cause candidate tags to analyze"
+              },
+              "start_time": {
+                "type": "datetime",
+                "required": false
+              },
+              "end_time": {
+                "type": "datetime",
+                "required": false
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "listDatasourceTypes",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/system/datasourceTypes",
+      "localProxyRoute": "/api/agent-factory/system/datasourceTypes",
+      "serviceFunction": null,
+      "description": "Retrieves the time-series datastore types supported by the platform.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Datasource types retrieved successfully.",
+        "data": {
+          "datasources": [
+            {
+              "type": "iotdb",
+              "display_name": "IoTDB"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "listModels",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/models",
+      "localProxyRoute": "/api/agent-factory/models",
+      "serviceFunction": "agentFactoryService.listModels()",
+      "description": "Lists all registered Large Language Models configured in the backend alongside their system features.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Models retrieved successfully.",
+        "data": [
+          {
+            "id": "claude_3_haiku",
+            "name": "Claude 3 Haiku v1",
+            "provider": "Anthropic",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "claude_3_5_sonnet",
+            "name": "Claude 3.5 Sonnet v1",
+            "provider": "Anthropic",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "nova_2_lite",
+            "name": "Nova 2 Lite v1",
+            "provider": "Amazon",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "nova_pro_1_0",
+            "name": "Nova Pro 1.0",
+            "provider": "Amazon",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": true
+          },
+          {
+            "id": "nova_lite_1_0",
+            "name": "Nova Lite 1.0",
+            "provider": "Amazon",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": true
+          },
+          {
+            "id": "nova_micro_1_0",
+            "name": "Nova Micro 1.0",
+            "provider": "Amazon",
+            "supports_tools": false,
+            "supports_structured_output": false,
+            "supports_vision": false
+          },
+          {
+            "id": "deepseek_v3_2",
+            "name": "DeepSeek V3.2 v1",
+            "provider": "DeepSeek",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "deepseek_v3_1",
+            "name": "DeepSeek V3.1 v3",
+            "provider": "DeepSeek",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "gemma_3_4b_it",
+            "name": "Gemma 3 4B IT v1",
+            "provider": "Google",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "gemma_3_27b_pt",
+            "name": "Gemma 3 27B PT v1",
+            "provider": "Google",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "gemma_3_12b_it",
+            "name": "Gemma 3 12B IT v1",
+            "provider": "Google",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "llama_3_8b_instruct",
+            "name": "Llama 3 8B Instruct v1",
+            "provider": "Meta",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "llama_3_70b_instruct",
+            "name": "Llama 3 70B Instruct v1",
+            "provider": "Meta",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "gpt_oss_safeguard_120b",
+            "name": "GPT OSS Safeguard 120B v1",
+            "provider": "OpenAI",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "gpt_oss_120b",
+            "name": "GPT OSS 120B v1",
+            "provider": "OpenAI",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "gpt_oss_safeguard_20b",
+            "name": "GPT OSS Safeguard 20B v1",
+            "provider": "OpenAI",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "gpt_oss_20b",
+            "name": "GPT OSS 20B v1",
+            "provider": "OpenAI",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "qwen3_235b_a22b_2507",
+            "name": "Qwen3 235B A22B 2507 v1",
+            "provider": "Alibaba",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "qwen3_vl_235b_a22b",
+            "name": "Qwen3-VL-235B-A22B v1",
+            "provider": "Alibaba",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": true
+          },
+          {
+            "id": "qwen3_next_80b_a3b",
+            "name": "Qwen3-Next-80B-A3B v1",
+            "provider": "Alibaba",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          },
+          {
+            "id": "qwen3_coder_480b",
+            "name": "Qwen3-Coder-480B-A35B-Instruct v1",
+            "provider": "Alibaba",
+            "supports_tools": true,
+            "supports_structured_output": true,
+            "supports_vision": false
+          }
+        ]
+      }
+    },
+    {
+      "name": "getNodeCatalog",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/nodeCatalog",
+      "localProxyRoute": "/api/agent-factory/nodeCatalog",
+      "serviceFunction": "agentFactoryService.getNodeCatalog()",
+      "description": "Retrieves the list of both visual drag-and-drop structural editor components (LLM, Memory, Prompt, Output, Datasource) and dynamic analytical tools for canvas population.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Node catalog retrieved successfully.",
+        "data": [
+          {
+            "name": "llm",
+            "description": "Configure the core language model and inference credentials.",
+            "category": "system",
+            "parameters": {
+              "model_name": "str"
+            },
+            "allowed_models": [
+              {
+                "id": "claude_3_haiku",
+                "name": "Claude 3 Haiku v1",
+                "provider": "Anthropic",
+                "supports_tools": true,
+                "supports_structured_output": true,
+                "supports_vision": false
+              }
+            ]
+          },
+          {
+            "name": "memory",
+            "description": "Configure sliding window, persistent, or hybrid chat memory.",
+            "category": "system",
+            "parameters": {
+              "type": "str (none, window, sqlite, hybrid)",
+              "k": "int (conversation turns limit)",
+              "db_path": "str (SQLite database location for persistence)"
+            }
+          },
+          {
+            "name": "prompt",
+            "description": "Configure the agent's base system prompt rules and guidelines.",
+            "category": "system",
+            "parameters": {
+              "system_prompt": "str (instructions context)"
+            }
+          },
+          {
+            "name": "output",
+            "description": "Configure formatting modes for final agent outputs (text/structured).",
+            "category": "system",
+            "parameters": {
+              "mode": "str (text or structured)",
+              "schema": "Dict (optional JSON Schema)"
+            }
+          },
+          {
+            "name": "iotdb",
+            "description": "System-managed Apache IoTDB datasource.",
+            "category": "datasource",
+            "parameters": {}
+          }
+        ]
+      }
+    },
+    {
+      "name": "listAvailableFeatures",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/listAvailableFeatures",
+      "localProxyRoute": "/api/agent-factory/listAvailableFeatures",
+      "serviceFunction": null,
+      "description": "Returns configuration panel features and their sidebar sorting order for frontend layout rendering.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Available features retrieved successfully.",
+        "data": {
+          "features": [
+            {
+              "id": "model_config",
+              "name": "Model Configuration",
+              "order": 1
+            },
+            {
+              "id": "datasource_config",
+              "name": "Datasource Configuration",
+              "order": 2
+            },
+            {
+              "id": "tool",
+              "name": "Tool Configuration",
+              "order": 3
+            },
+            {
+              "id": "memory",
+              "name": "Memory Configuration",
+              "order": 4
+            },
+            {
+              "id": "system_prompt",
+              "name": "System Prompt",
+              "order": 5
+            },
+            {
+              "id": "output",
+              "name": "Output Configuration",
+              "order": 6
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "memoryTypes",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/memoryTypes",
+      "localProxyRoute": "/api/agent-factory/memoryTypes",
+      "serviceFunction": null,
+      "description": "Retrieves the conversational history memory storage strategies supported by the agent platform.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Memory types retrieved successfully.",
+        "data": {
+          "memory_types": [
+            {
+              "type": "none",
+              "display_name": "No Memory"
+            },
+            {
+              "type": "window",
+              "display_name": "Window Memory"
+            },
+            {
+              "type": "sqlite",
+              "display_name": "SQLite Memory"
+            },
+            {
+              "type": "hybrid",
+              "display_name": "Hybrid Memory"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "outputTypes",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/outputTypes",
+      "localProxyRoute": "/api/agent-factory/outputTypes",
+      "serviceFunction": null,
+      "description": "Retrieves the formatting response output schemas supported by agent nodes.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Output types retrieved successfully.",
+        "data": {
+          "output_types": [
+            {
+              "type": "text",
+              "display_name": "Plain Text"
+            },
+            {
+              "type": "json",
+              "display_name": "JSON"
+            },
+            {
+              "type": "markdown",
+              "display_name": "Markdown"
+            },
+            {
+              "type": "structured",
+              "display_name": "Structured Output"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "saveTemplate",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/agentTemplates",
+      "localProxyRoute": "/api/agent-factory/agentTemplates",
+      "serviceFunction": "agentFactoryService.saveTemplate(payload)",
+      "description": "Creates or replaces a draft agent graph configuration in-memory. Runs visual graph compilation and validation checks, creating an active in-memory instance ready for chat testing.",
+      "contentType": "application/json",
+      "requestBody": {
+        "template_id": "one_line_agent",
+        "name": "One Line Answer Agent",
+        "description": "An agent that answers questions in a single line using Claude 3.5 Sonnet and SQLite memory.",
+        "status": "draft",
+        "plant_code_id": "Plant_1",
+        "graph": {
+          "nodes": [
+            {
+              "id": "llm_node",
+              "type": "llm",
+              "config": {
+                "model_name": "claude_3_5_sonnet"
+              }
+            }
+          ],
+          "connections": []
+        }
+      },
+      "plantCodeId": { "placement": "body", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Template saved successfully.",
+        "data": {
+          "status": "saved",
+          "template_id": "one_line_agent"
+        }
+      }
+    },
+    {
+      "name": "updateTemplate",
+      "method": "PUT",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/agentTemplates/{id}",
+      "localProxyRoute": "/api/agent-factory/agentTemplates/{id}",
+      "serviceFunction": "agentFactoryService.saveTemplate(payload)",
+      "description": "Replaces or updates a draft template version for an existing ID. Ownership checks are run against the active draft (in-memory) or the deployed template (database). Changes remain in server memory.",
+      "contentType": "application/json",
+      "requestBody": {
+        "template_id": "one_line_agent",
+        "name": "Updated One Line Answer Agent",
+        "description": "An updated agent that answers questions in one line only.",
+        "status": "draft",
+        "username": "aryan",
+        "plant_code_id": "Plant_1",
+        "graph": {
+          "nodes": [
+            {
+              "id": "llm_node",
+              "type": "llm",
+              "config": {
+                "model_name": "nova_lite_1_0"
+              }
+            }
+          ],
+          "connections": []
+        }
+      },
+      "plantCodeId": { "placement": "body", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Template updated successfully.",
+        "data": {
+          "status": "updated",
+          "template_id": "one_line_agent",
+          "draft_status": "active"
+        }
+      }
+    },
+    {
+      "name": "listTemplates",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/agentTemplates",
+      "localProxyRoute": "/api/agent-factory/agentTemplates",
+      "serviceFunction": "agentFactoryService.listTemplates()",
+      "description": "Lists all agent templates configured by the user. Returns a merged list of in-memory drafts and PostgreSQL deployed records.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string", "Username": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Templates retrieved successfully.",
+        "data": [
+          {
+            "template_id": "test_agent_plot",
+            "name": "Plot Agent",
+            "description": "Plot tool test",
+            "graph": {
+              "nodes": [
+                {
+                  "id": "llm1",
+                  "type": "llm",
+                  "config": {
+                    "model_name": "nova_lite_1_0"
+                  }
+                }
+              ],
+              "connections": []
+            },
+            "status": "deployed",
+            "username": "aryan",
+            "plant_code_id": "Plant_1"
+          }
+        ]
+      }
+    },
+    {
+      "name": "getTemplate",
+      "method": "GET",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/agentTemplates/{id}",
+      "localProxyRoute": "/api/agent-factory/agentTemplates/{id}",
+      "serviceFunction": "agentFactoryService.getTemplate(id)",
+      "description": "Retrieves a single agent template configuration. Checks active memory drafts first, then queries PostgreSQL.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string", "Username": "string", "id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Template retrieved successfully.",
+        "data": {
+          "template_id": "one_line_agent",
+          "name": "Updated One Line Answer Agent",
+          "description": "An updated agent that answers questions in one line only.",
+          "graph": {
+            "nodes": [
+              {
+                "id": "llm_node",
+                "type": "llm",
+                "config": {
+                  "model_name": "nova_lite_1_0"
+                }
+              }
+            ],
+            "connections": []
+          },
+          "status": "draft",
+          "username": "aryan",
+          "plant_code_id": "Plant"
+        }
+      }
+    },
+    {
+      "name": "deleteTemplate",
+      "method": "DELETE",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/agentTemplates/{id}",
+      "localProxyRoute": "/api/agent-factory/agentTemplates/{id}",
+      "serviceFunction": "agentFactoryService.deleteTemplate(id)",
+      "description": "Deletes a specific agent template configuration by ID from in-memory drafts and PostgreSQL database records.",
+      "contentType": null,
+      "requestParams": { "plant_code_id": "string", "Username": "string", "id": "string" },
+      "plantCodeId": { "placement": "query", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Template deleted successfully.",
+        "data": {
+          "status": "deleted",
+          "template_id": "one_line_agent"
+        }
+      }
+    },
+    {
+      "name": "deployTemplate",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/agentTemplates/{id}/deploy",
+      "localProxyRoute": "/api/agent-factory/agentTemplates/{id}/deploy",
+      "serviceFunction": "agentFactoryService.deployTemplate(id)",
+      "description": "Publishes a draft template config by reading it from drafts (in-memory) and writing it securely into PostgreSQL database records.",
+      "contentType": "application/json",
+      "requestBody": {
+        "plant_code_id": "Plant_1",
+        "status": "draft",
+        "agent_id": "one_line_agent"
+      },
+      "plantCodeId": { "placement": "body", "confirmed": false },
+      "responseBody": {
+        "success": true,
+        "message": "Template deployed successfully.",
+        "data": {
+          "status": "deployed",
+          "agent_id": "one_line_agent"
+        }
+      }
+    },
+    {
+      "name": "chatWithAgent",
+      "method": "POST",
+      "fullUrl": "http://172.16.0.12/api/decisionops-pod1/p1/agentFactory/agents/{id}/chat",
+      "localProxyRoute": "/api/agent-factory/agents/{id}/chat",
+      "serviceFunction": "agentFactoryService.chatWithAgent(agentId, query)",
+      "description": "Sends a query to a compiled agent instance. Resolves history context using the memory settings, executes up to 5 tool steps using Bedrock, updates histories, and returns the formatted response.",
+      "contentType": "application/json",
+      "requestBody": {
+        "username": "aryan",
+        "query": "Hi i am a Aivee"
+      },
+      "plantCodeId": null,
+      "responseBody": {
+        "success": true,
+        "message": "Chat response generated successfully.",
+        "data": {
+          "response": "Hello! How can I help you today?"
+        }
+      }
+    }
+  ]
+}

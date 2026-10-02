@@ -1,0 +1,207 @@
+{
+  "domain": "cdm-integrated-view",
+  "base_url": "http://13.71.62.24/api/decisionops-pod1",
+  "gateway": "decisionops-pod1",
+  "endpoints": [
+    {
+      "name": "getLabels",
+      "method": "GET",
+      "real_url": "http://13.71.62.24/api/decisionops-pod1/p0/cdm/integrated/labels",
+      "local_proxy_route": "/api/domain-configuration/integrated/labels",
+      "description": "Label tabs with their row counts",
+      "query_params": {
+        "plant_code_id": {
+          "type": "string",
+          "placement": "query",
+          "confirmed": true,
+          "example": "Plant_1"
+        }
+      },
+      "response_sample": {
+        "success": true,
+        "message": "Integrated view labels retrieved successfully",
+        "data": {
+          "plant_code_id": "Plant_1",
+          "labels": [
+            {
+              "key": "integrity",
+              "label": "Integrity",
+              "colour": "green",
+              "sort_order": 1,
+              "row_count": 0
+            },
+            {
+              "key": "reliability",
+              "label": "Reliability",
+              "colour": "blue",
+              "sort_order": 2,
+              "row_count": 0
+            },
+            {
+              "key": "production",
+              "label": "Production",
+              "colour": "amber",
+              "sort_order": 3,
+              "row_count": 0
+            },
+            {
+              "key": "maintenance",
+              "label": "Maintenance",
+              "colour": "purple",
+              "sort_order": 4,
+              "row_count": 0
+            }
+          ],
+          "total": 0
+        }
+      }
+    },
+    {
+      "name": "getColumns",
+      "method": "GET",
+      "real_url": "http://13.71.62.24/api/decisionops-pod1/p0/cdm/integrated/columns",
+      "local_proxy_route": "/api/domain-configuration/integrated/columns",
+      "description": "Column plan and layer definitions for one label",
+      "query_params": {
+        "label": {
+          "type": "string",
+          "placement": "query",
+          "confirmed": true,
+          "example": "integrity"
+        }
+      },
+      "response_sample": {
+        "success": true,
+        "message": "Integrated integrity columns retrieved successfully",
+        "data": {
+          "label": "integrity",
+          "title": "Asset Integrity",
+          "description": "Corrosion, inspection, and structural-integrity view of each asset — what could fail structurally, how it's performing, what's been found, and what's being done about it.",
+          "layers": [
+            {
+              "layer": "asset",
+              "standard": "ISO 15926, ISO 14224, ISA-95, ISO 8000",
+              "fields": [
+                {
+                  "layer": "asset",
+                  "name": "Equipment",
+                  "status": "backed",
+                  "source_label": "Asset Master",
+                  "note": null
+                },
+                {
+                  "layer": "asset",
+                  "name": "Area",
+                  "status": "backed",
+                  "source_label": "Asset Master",
+                  "note": null
+                },
+                {
+                  "layer": "asset",
+                  "name": "Process Unit",
+                  "status": "backed",
+                  "source_label": "Asset Master",
+                  "note": null
+                },
+                {
+                  "layer": "asset",
+                  "name": "Component",
+                  "status": "backed",
+                  "source_label": "SAP",
+                  "note": null
+                },
+                {
+                  "layer": "asset",
+                  "name": "Sensor / Tag",
+                  "status": "backed",
+                  "source_label": "Historian",
+                  "note": null
+                }
+              ]
+            }
+          ],
+          "columns": [],
+          "backed": 18,
+          "not_yet_backed": 13
+        }
+      }
+    },
+    {
+      "name": "getView",
+      "method": "GET",
+      "real_url": "http://13.71.62.24/api/decisionops-pod1/p0/cdm/integrated/view",
+      "local_proxy_route": "/api/domain-configuration/integrated/view",
+      "description": "Integrated view rows for one label",
+      "query_params": {
+        "label": {
+          "type": "string",
+          "placement": "query",
+          "confirmed": true,
+          "example": "integrity"
+        },
+        "plant_code_id": {
+          "type": "string",
+          "placement": "query",
+          "confirmed": true,
+          "example": "Plant_1"
+        },
+        "include_processed": {
+          "type": "boolean",
+          "placement": "query",
+          "confirmed": true,
+          "example": true
+        },
+        "page": {
+          "type": "number",
+          "placement": "query",
+          "confirmed": true,
+          "example": 1
+        },
+        "page_size": {
+          "type": "number",
+          "placement": "query",
+          "confirmed": true,
+          "example": 50
+        }
+      },
+      "response_sample": {
+        "success": true,
+        "message": "Integrated rows retrieved successfully",
+        "data": {
+          "label": "integrity",
+          "title": "Asset Integrity",
+          "plant_code_id": "Plant_1",
+          "columns": [],
+          "rows": [],
+          "total": 0,
+          "committed": 0,
+          "processed": 0,
+          "pagination": {
+            "page": 1,
+            "page_size": 50,
+            "total_items": 0,
+            "total_pages": 0,
+            "has_more": false,
+            "next_cursor": null
+          },
+          "is_empty": true
+        }
+      }
+    },
+    {
+      "name": "recompute",
+      "method": "POST",
+      "real_url": "http://13.71.62.24/api/decisionops-pod1/p0/cdm/integrated/recompute",
+      "local_proxy_route": "/api/domain-configuration/integrated/recompute",
+      "description": "Recompute and store the Integrated view",
+      "body": {
+        "plant_code_id": {
+          "type": "string",
+          "placement": "body",
+          "confirmed": true,
+          "example": "Plant_1"
+        }
+      }
+    }
+  ]
+}

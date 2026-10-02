@@ -1,0 +1,1712 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Domain Configuration Studio — DecisionOps Wireframe</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#2563eb',
+              hover: '#1d4ed8',
+              muted: '#eff6ff',
+              dark: '#3b82f6',
+              'dark-hover': '#2563eb',
+              'dark-muted': '#1e3a8a',
+            },
+            surface: {
+              DEFAULT: '#ffffff',
+              2: '#f8fafc',
+              3: '#f1f5f9',
+              dark: '#0f172a',
+              'dark-2': '#1e293b',
+              'dark-3': '#334155',
+            },
+            canvas: {
+              DEFAULT: '#f8fafc',
+              dark: '#090d16',
+            },
+            border: {
+              DEFAULT: '#e2e8f0',
+              strong: '#cbd5e1',
+              dark: '#334155',
+              'dark-strong': '#475569',
+            },
+            success: {
+              DEFAULT: '#10b981',
+              muted: '#ecfdf5',
+              dark: '#34d399',
+            },
+            warning: {
+              DEFAULT: '#f59e0b',
+              muted: '#fffbeb',
+              dark: '#fbbf24',
+            },
+            danger: {
+              DEFAULT: '#f43f5e',
+              muted: '#fff1f2',
+              dark: '#fb7185',
+            }
+          },
+          boxShadow: {
+            'card': '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
+            'card-hover': '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
+            'modal': '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+            'glow-blue': '0 0 20px -2px rgba(59, 130, 246, 0.4)',
+          },
+          animation: {
+            'shimmer': 'shimmer 2s infinite linear',
+            'pulse-subtle': 'pulseSubtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          },
+          keyframes: {
+            shimmer: {
+              '0%': { transform: 'translateX(-100%)' },
+              '100%': { transform: 'translateX(100%)' },
+            },
+            pulseSubtle: {
+              '0%, 100%': { opacity: 1 },
+              '50%': { opacity: 0.7 },
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    .dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+    
+    /* Shimmer Skeleton Styles */
+    .skeleton-box {
+      position: relative;
+      overflow: hidden;
+      background: #e2e8f0;
+      border-radius: 0.375rem;
+    }
+    .dark .skeleton-box {
+      background: #1e293b;
+    }
+    .skeleton-box::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      transform: translateX(-100%);
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      animation: shimmer 1.6s infinite;
+    }
+    .dark .skeleton-box::after {
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+    }
+    
+    /* Custom radio styling */
+    .custom-radio:checked {
+      border-color: #3b82f6;
+      background-image: radial-gradient(#3b82f6 40%, transparent 45%);
+    }
+
+    /* Modal Backdrop Transitions */
+    .modal-backdrop {
+      transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s;
+    }
+    .modal-content {
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    /* Drawer Transition */
+    .drawer-content {
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+  </style>
+</head>
+<body class="bg-canvas dark:bg-canvas-dark text-slate-900 dark:text-slate-100 font-sans antialiased min-h-screen flex flex-col transition-colors duration-200">
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       TOP APP BAR / NAVIGATION
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <header class="sticky top-0 z-30 bg-surface/80 dark:bg-surface-dark/80 backdrop-blur-md border-b border-border dark:border-border-dark px-4 sm:px-6 py-3 transition-colors duration-200">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4">
+      
+      <!-- Brand & Context -->
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black text-base shadow-sm">
+          <i data-lucide="layers" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Plant Ops</span>
+            <span class="text-slate-400 dark:text-slate-600">/</span>
+            <span class="text-xs font-semibold text-blue-600 dark:text-blue-400">Domain Configuration Studio</span>
+          </div>
+          <div class="flex items-center gap-2 mt-0.5">
+            <h1 class="text-base font-extrabold tracking-tight text-slate-900 dark:text-white">Alpha Refinery &bull; Train 2 (Unit-400)</h1>
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Live Pipeline Active
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toolbar & Actions -->
+      <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Quick Modal Launcher Dropdown -->
+        <div class="relative inline-block text-left">
+          <button id="modalsMenuBtn" onclick="toggleModalMenu()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-2 dark:bg-surface-dark-2 hover:bg-surface-3 dark:hover:bg-surface-dark-3 text-slate-700 dark:text-slate-200 border border-border dark:border-border-dark cursor-pointer transition">
+            <i data-lucide="layout-template" class="w-3.5 h-3.5 text-blue-500"></i>
+            <span>Preview Modals</span>
+            <i data-lucide="chevron-down" class="w-3 h-3 text-slate-400"></i>
+          </button>
+          <div id="modalsMenuDropdown" class="hidden absolute right-0 mt-2 w-64 rounded-xl bg-surface dark:bg-surface-dark-2 border border-border dark:border-border-dark shadow-xl z-50 py-1.5 text-xs text-slate-700 dark:text-slate-200">
+            <div class="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Standalone Modals (from SS)</div>
+            <button onclick="openModal('modalAddIntegration'); toggleModalMenu()" class="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2 cursor-pointer">
+              <i data-lucide="plus-circle" class="w-4 h-4 text-blue-500"></i>
+              <span>1. Add Data Integration Modal</span>
+            </button>
+            <button onclick="openModal('modalConfigurePnid'); toggleModalMenu()" class="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2 cursor-pointer">
+              <i data-lucide="file-cog" class="w-4 h-4 text-indigo-500"></i>
+              <span>2. Configure P&ID Source Modal</span>
+            </button>
+            <button onclick="openModal('modalPipelineProgress'); toggleModalMenu()" class="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2 cursor-pointer">
+              <i data-lucide="activity" class="w-4 h-4 text-emerald-500"></i>
+              <span>3. Parallel Pipeline Orchestrator</span>
+            </button>
+            <button onclick="openModal('modalConfirmLock'); toggleModalMenu()" class="w-full text-left px-3 py-2 hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2 cursor-pointer">
+              <i data-lucide="shield-check" class="w-4 h-4 text-violet-500"></i>
+              <span>4. Confirm Integrated View Modal</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Shimmer Skeleton Toggle -->
+        <button id="toggleSkeletonBtn" onclick="toggleSkeleton()" title="Toggle live shimmer skeleton loading states" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-2 dark:bg-surface-dark-2 hover:bg-surface-3 dark:hover:bg-surface-dark-3 text-slate-700 dark:text-slate-200 border border-border dark:border-border-dark cursor-pointer transition">
+          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+          <span id="skeletonBtnText">Skeleton: Off</span>
+        </button>
+
+        <!-- Dark / Light Mode Toggle -->
+        <button onclick="toggleTheme()" title="Toggle Theme" class="p-2 rounded-lg bg-surface-2 dark:bg-surface-dark-2 hover:bg-surface-3 dark:hover:bg-surface-dark-3 text-slate-700 dark:text-slate-200 border border-border dark:border-border-dark cursor-pointer transition">
+          <i data-lucide="moon" class="w-4 h-4 hidden dark:block text-blue-400"></i>
+          <i data-lucide="sun" class="w-4 h-4 block dark:hidden text-amber-500"></i>
+        </button>
+
+        <!-- Help / Information -->
+        <button onclick="alert('Wireframe Interactive Mode: All tabs, filters, modals, and drawers are live. Click around to test the seamless UX!')" class="p-2 rounded-lg bg-surface-2 dark:bg-surface-dark-2 hover:bg-surface-3 dark:hover:bg-surface-dark-3 text-slate-700 dark:text-slate-200 border border-border dark:border-border-dark cursor-pointer transition">
+          <i data-lucide="help-circle" class="w-4 h-4 text-slate-400"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       WORKFLOW STEPPER BAR (Minimal Click Integration Hub)
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <nav class="bg-surface dark:bg-surface-dark border-b border-border dark:border-border-dark px-4 sm:px-6 py-2.5 transition-colors duration-200">
+    <div class="max-w-7xl mx-auto flex items-center justify-between overflow-x-auto gap-2 sm:gap-4 no-scrollbar">
+      
+      <div class="flex items-center gap-1 sm:gap-3 shrink-0">
+        <!-- Step 1 -->
+        <button onclick="goToStep(1)" id="stepBtn1" class="step-btn group flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+          <span class="w-5 h-5 rounded-full bg-blue-600 dark:bg-blue-500 text-white flex items-center justify-center text-[11px] font-bold">1</span>
+          <span>Connect & Ingest</span>
+        </button>
+
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 dark:text-slate-600 shrink-0"></i>
+
+        <!-- Step 2 -->
+        <button onclick="goToStep(2)" id="stepBtn2" class="step-btn group flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-surface-2 dark:hover:bg-surface-dark-2 transition cursor-pointer">
+          <span class="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[11px] font-bold">2</span>
+          <span>Pipeline Orchestrator</span>
+          <span class="px-1.5 py-0.2 rounded text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold">60%</span>
+        </button>
+
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 dark:text-slate-600 shrink-0"></i>
+
+        <!-- Step 3 -->
+        <button onclick="goToStep(3)" id="stepBtn3" class="step-btn group flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-surface-2 dark:hover:bg-surface-dark-2 transition cursor-pointer">
+          <span class="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[11px] font-bold">3</span>
+          <span>Extracted Relationships</span>
+          <span class="px-1.5 py-0.2 rounded text-[10px] bg-amber-500/10 text-amber-600 dark:text-amber-400 font-bold">2 Flags</span>
+        </button>
+
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-slate-400 dark:text-slate-600 shrink-0"></i>
+
+        <!-- Step 4 -->
+        <button onclick="goToStep(4)" id="stepBtn4" class="step-btn group flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-surface-2 dark:hover:bg-surface-dark-2 transition cursor-pointer">
+          <span class="w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 flex items-center justify-center text-[11px] font-bold">4</span>
+          <span>Integrated Intelligence (Lock)</span>
+          <span class="px-1.5 py-0.2 rounded text-[10px] bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold">4 Domains</span>
+        </button>
+      </div>
+
+      <!-- Quick Fast-Action -->
+      <div class="hidden md:flex items-center gap-2 shrink-0">
+        <button onclick="openModal('modalConfirmLock')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm cursor-pointer transition">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          <span>Lock Integrated View</span>
+        </button>
+      </div>
+
+    </div>
+  </nav>
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       MAIN CONTENT CONTAINER
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ─────────────────────────────────────────────────────────────────────────
+         STEP 1 VIEW: DATA SOURCE INGESTION & SCHEMA BINDING
+         ───────────────────────────────────────────────────────────────────────── -->
+    <section id="stepView1" class="step-view space-y-6">
+      
+      <!-- Section Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span>Configure Data Source Integrations</span>
+            <span class="text-xs px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-semibold">Step 1 of 4</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Select an operational data source type to ingest CAD layers, sensor telemetry, technical manuals, or ERP equipment tables into the vector knowledge graph.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="openModal('modalAddIntegration')" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-semibold bg-surface-2 dark:bg-surface-dark-2 hover:bg-surface-3 dark:hover:bg-surface-dark-3 text-slate-700 dark:text-slate-200 border border-border dark:border-border-dark cursor-pointer transition">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Browse More Connectors</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Connector Cards Grid (Shadcn style cards) -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        
+        <!-- S3 Connector -->
+        <div onclick="selectConnectorCard(this, 's3')" class="connector-card p-4 rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark hover:border-slate-400 dark:hover:border-slate-500 cursor-pointer transition-all duration-200 hover:shadow-card-hover group relative">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-8 h-8 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center font-bold">
+              <i data-lucide="cloud" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Ready</span>
+          </div>
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">Amazon S3 Bucket</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">PDF, CAD & Image sync</p>
+        </div>
+
+        <!-- P&ID Schematics (Active Selected) -->
+        <div onclick="selectConnectorCard(this, 'pnid')" class="connector-card active-connector p-4 rounded-xl border-2 border-blue-600 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 cursor-pointer transition-all duration-200 shadow-glow-blue relative">
+          <div class="absolute -top-2 -right-2 w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] font-bold">
+            <i data-lucide="check" class="w-3 h-3"></i>
+          </div>
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold">
+              <i data-lucide="network" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-blue-600/10 text-blue-600 dark:text-blue-400">Configuring</span>
+          </div>
+          <h3 class="font-bold text-sm text-blue-600 dark:text-blue-400">P&ID Schematics</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-300 mt-1">Vector CAD & Diagram parser</p>
+        </div>
+
+        <!-- SAP ERP -->
+        <div onclick="selectConnectorCard(this, 'sap')" class="connector-card p-4 rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark hover:border-slate-400 dark:hover:border-slate-500 cursor-pointer transition-all duration-200 hover:shadow-card-hover group relative">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
+              <i data-lucide="database" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">100% Synced</span>
+          </div>
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">SAP ERP</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Equipment & Asset Tables</p>
+        </div>
+
+        <!-- OPC-UA / Historian -->
+        <div onclick="selectConnectorCard(this, 'opcua')" class="connector-card p-4 rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark hover:border-slate-400 dark:hover:border-slate-500 cursor-pointer transition-all duration-200 hover:shadow-card-hover group relative">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-600 dark:text-purple-400 flex items-center justify-center font-bold">
+              <i data-lucide="activity" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Ready</span>
+          </div>
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">OPC-UA / Historian</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Time-series SCADA logs</p>
+        </div>
+
+        <!-- PostgreSQL DB -->
+        <div onclick="selectConnectorCard(this, 'postgres')" class="connector-card p-4 rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark hover:border-slate-400 dark:hover:border-slate-500 cursor-pointer transition-all duration-200 hover:shadow-card-hover group relative">
+          <div class="flex items-center justify-between mb-3">
+            <div class="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold">
+              <i data-lucide="server" class="w-4 h-4"></i>
+            </div>
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">Ready</span>
+          </div>
+          <h3 class="font-bold text-sm text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition">PostgreSQL DB</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Relational operational DB</p>
+        </div>
+
+      </div>
+
+      <!-- INLINE CONFIGURATION STUDIO (Replaces Modal to reduce clicks) -->
+      <div class="bg-surface dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark p-5 sm:p-7 shadow-sm space-y-6">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-border dark:border-border-dark">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+              <i data-lucide="sliders" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Configure P&ID Schematic Ingestion</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Specify schematic files, auto-extraction schema tokens, and ingestion mode</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openModal('modalConfigurePnid')" class="text-xs text-slate-500 hover:text-blue-600 dark:hover:text-blue-400 inline-flex items-center gap-1 font-medium cursor-pointer">
+              <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+              <span>Open in Popout Dialog</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          
+          <!-- Left Column: File Dropzone & Queued Files (6 cols) -->
+          <div class="lg:col-span-6 space-y-4">
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              1. Upload Schematic Files
+            </label>
+
+            <!-- Dropzone -->
+            <div id="dropzone" class="border-2 border-dashed border-border dark:border-border-dark hover:border-blue-500 dark:hover:border-blue-500 rounded-xl p-6 text-center bg-surface-2/60 dark:bg-surface-dark-2/60 transition-colors cursor-pointer group">
+              <input type="file" id="fileInput" class="hidden" />
+              <div class="w-12 h-12 mx-auto rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+              </div>
+              <p class="text-sm font-semibold text-slate-800 dark:text-slate-200">Drag files here or <span class="text-blue-600 dark:text-blue-400 underline">browse drive</span></p>
+              <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">PDF, CAD, DXF, PNG (Up to 100MB per file)</p>
+            </div>
+
+            <!-- Queued Files Section -->
+            <div>
+              <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400 mb-2">
+                <span>QUEUED FILES (1)</span>
+                <span class="text-blue-600 dark:text-blue-400 font-semibold cursor-pointer hover:underline">+ Add more</span>
+              </div>
+              
+              <div class="flex items-center justify-between p-3 rounded-xl bg-surface-2 dark:bg-surface-dark-2 border border-border dark:border-border-dark hover:border-slate-300 dark:hover:border-slate-600 transition">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="w-8 h-8 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center font-bold shrink-0">
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
+                  </div>
+                  <div class="truncate">
+                    <div class="text-xs font-bold text-slate-900 dark:text-white truncate">main_plant_layout.pdf</div>
+                    <div class="text-[11px] text-slate-500 dark:text-slate-400">2.4 MB &bull; <span class="text-emerald-600 dark:text-emerald-400 font-medium">Ready for OCR Extraction</span></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1 shrink-0">
+                  <button title="Preview Document" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-surface-3 dark:hover:bg-surface-dark-3 transition cursor-pointer">
+                    <i data-lucide="eye" class="w-4 h-4"></i>
+                  </button>
+                  <button title="Remove file" class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition cursor-pointer">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Right Column: Target Extraction Schema & Ingestion Options (6 cols) -->
+          <div class="lg:col-span-6 space-y-5 bg-surface-2/40 dark:bg-surface-dark-2/40 rounded-xl p-5 border border-border dark:border-border-dark">
+            
+            <!-- Schema Tags -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  2. Target Extraction Schema
+                </label>
+                <span class="text-[11px] text-blue-600 dark:text-blue-400 font-medium cursor-pointer hover:underline">Select All</span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mb-3">Toggle entities for automatic AI layer OCR & relationship extraction:</p>
+              
+              <div class="flex flex-wrap gap-2">
+                <button onclick="toggleChip(this)" class="schema-chip px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white border border-blue-600 hover:bg-blue-700 transition cursor-pointer flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3 h-3"></i>
+                  <span>Drawing Number</span>
+                </button>
+                <button onclick="toggleChip(this)" class="schema-chip px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white border border-blue-600 hover:bg-blue-700 transition cursor-pointer flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3 h-3"></i>
+                  <span>Line ID</span>
+                </button>
+                <button onclick="toggleChip(this)" class="schema-chip px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white border border-blue-600 hover:bg-blue-700 transition cursor-pointer flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3 h-3"></i>
+                  <span>Instrument Tag</span>
+                </button>
+                <button onclick="toggleChip(this)" class="schema-chip px-3 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 text-white border border-blue-600 hover:bg-blue-700 transition cursor-pointer flex items-center gap-1.5">
+                  <i data-lucide="check" class="w-3 h-3"></i>
+                  <span>Revision</span>
+                </button>
+                <button onclick="addCustomKeyPrompt()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface dark:bg-surface-dark text-slate-600 dark:text-slate-300 border-2 border-dashed border-border dark:border-border-dark hover:border-blue-500 hover:text-blue-500 transition cursor-pointer flex items-center gap-1.5">
+                  <i data-lucide="plus" class="w-3 h-3"></i>
+                  <span>Custom Key</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Ingestion Mode -->
+            <div class="pt-3 border-t border-border dark:border-border-dark">
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                3. Ingestion Mode
+              </label>
+              
+              <div class="space-y-2">
+                <label class="flex items-center gap-3 p-2.5 rounded-lg bg-surface dark:bg-surface-dark border border-border dark:border-border-dark cursor-pointer hover:border-blue-400 transition">
+                  <input type="radio" name="ingestionMode" checked class="w-4 h-4 text-blue-600 accent-blue-600 cursor-pointer" />
+                  <div>
+                    <span class="text-xs font-bold text-slate-900 dark:text-white block">Process unprocessed files only</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Incremental delta scan to preserve existing validated relationships</span>
+                  </div>
+                </label>
+
+                <label class="flex items-center gap-3 p-2.5 rounded-lg bg-surface dark:bg-surface-dark border border-border dark:border-border-dark cursor-pointer hover:border-blue-400 transition">
+                  <input type="radio" name="ingestionMode" class="w-4 h-4 text-blue-600 accent-blue-600 cursor-pointer" />
+                  <div>
+                    <span class="text-xs font-bold text-slate-900 dark:text-white block">Full Re-index & Re-parse</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Reconstruct complete vector knowledge graph from ground up</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <!-- Sync CTA -->
+            <div class="pt-4 flex items-center justify-end gap-3">
+              <button onclick="goToStep(2)" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm hover:shadow transition cursor-pointer">
+                <i data-lucide="play" class="w-4 h-4"></i>
+                <span>Upload & Trigger Pipeline</span>
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ─────────────────────────────────────────────────────────────────────────
+         STEP 2 VIEW: PARALLEL DATA PIPELINE ORCHESTRATOR
+         ───────────────────────────────────────────────────────────────────────── -->
+    <section id="stepView2" class="step-view hidden space-y-6">
+      
+      <!-- Section Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <span>Parallel Data Pipeline Orchestrator</span>
+            <span class="text-xs px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-semibold">Step 2 of 4 &bull; Processing</span>
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Real-time async multi-connector ingestion, vector indexing, OCR extraction, and entity linkage.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="openModal('modalPipelineProgress')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-surface-2 dark:bg-surface-dark-2 hover:bg-surface-3 dark:hover:bg-surface-dark-3 text-slate-700 dark:text-slate-200 border border-border dark:border-border-dark cursor-pointer transition">
+            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+            <span>Popout Modal</span>
+          </button>
+          <button onclick="goToStep(3)" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm cursor-pointer transition">
+            <span>Proceed to Relationship Review</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Pipeline Dashboard Card -->
+      <div class="bg-surface dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark p-6 shadow-sm space-y-6">
+        
+        <!-- Overall Progress Header -->
+        <div class="p-5 rounded-xl bg-surface-2 dark:bg-surface-dark-2 border border-border dark:border-border-dark space-y-3">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <div class="w-2.5 h-2.5 rounded-full bg-blue-500 animate-ping"></div>
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Overall Processing Progress</span>
+            </div>
+            <div class="text-sm font-extrabold text-blue-600 dark:text-blue-400 font-mono">
+              60% <span class="text-xs text-slate-500 font-normal">(3 of 5 Connectors Complete)</span>
+            </div>
+          </div>
+          
+          <!-- Master Progress Bar -->
+          <div class="w-full h-3 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden relative">
+            <div class="h-full bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full transition-all duration-500" style="width: 60%"></div>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 pt-1">
+            <span>Started 01:24s ago &bull; Target: 4 Operational Domains</span>
+            <span class="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">1,240 Vector Embeddings Generated</span>
+          </div>
+        </div>
+
+        <!-- Pipeline Stages / Connectors List -->
+        <div class="space-y-3.5">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Active Data Connectors & Extraction Tasks
+          </h3>
+
+          <!-- Task 1: SAP (Completed) -->
+          <div class="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/30 dark:bg-emerald-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+                <i data-lucide="check" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="text-sm font-bold text-slate-900 dark:text-white">SAP Master Data Connector</h4>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Completed</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Indexed 1,240 asset & equipment records into Vector Knowledge Graph</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 self-end sm:self-center">
+              <span class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">100% ✓</span>
+            </div>
+          </div>
+
+          <!-- Task 2: P&ID Schematics (In Progress) -->
+          <div class="p-4 rounded-xl border-2 border-blue-500/50 dark:border-blue-500/50 bg-blue-50/20 dark:bg-blue-950/20 shadow-sm space-y-3">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0 animate-spin">
+                  <i data-lucide="loader-2" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h4 class="text-sm font-bold text-slate-900 dark:text-white">P&ID Schematics (Main Plant Layout)</h4>
+                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 animate-pulse">Processing</span>
+                  </div>
+                  <p class="text-xs text-slate-500 dark:text-slate-400">Parsing CAD vector layers & OCR tag extraction (38 relationships identified)...</p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 self-end sm:self-center">
+                <span class="text-xs font-mono font-bold text-blue-600 dark:text-blue-400">45%</span>
+              </div>
+            </div>
+
+            <!-- Active task progress bar -->
+            <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+              <div class="h-full bg-blue-500 rounded-full animate-pulse" style="width: 45%"></div>
+            </div>
+          </div>
+
+          <!-- Task 3: OPC-UA Timeseries (Completed) -->
+          <div class="p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/50 bg-emerald-50/30 dark:bg-emerald-950/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0">
+                <i data-lucide="check" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="text-sm font-bold text-slate-900 dark:text-white">Historian / Time-Series SCADA Connector</h4>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Completed</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Bound 48 telemetry sensor tags to physical assets</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 self-end sm:self-center">
+              <span class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">100% ✓</span>
+            </div>
+          </div>
+
+          <!-- Task 4: Technical Manuals (Queued) -->
+          <div class="p-4 rounded-xl border border-border dark:border-border-dark bg-surface-2/40 dark:bg-surface-dark-2/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 opacity-70">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 text-slate-500 flex items-center justify-center font-bold shrink-0">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h4 class="text-sm font-bold text-slate-900 dark:text-white">Technical Manuals & Maintenance Docs</h4>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800 text-slate-500">Queued</span>
+                </div>
+                <p class="text-xs text-slate-500 dark:text-slate-400">Waiting for P&ID entity graph output to link SOP citations</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-3 self-end sm:self-center">
+              <span class="text-xs font-mono font-bold text-slate-400">0%</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Terminal Logs Drawer (Collapsible) -->
+        <div class="rounded-xl border border-border dark:border-border-dark bg-slate-950 text-slate-300 p-4 font-mono text-xs space-y-1.5">
+          <div class="flex items-center justify-between text-slate-400 pb-2 border-b border-slate-800">
+            <span class="flex items-center gap-2">
+              <i data-lucide="terminal" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span class="font-bold text-[11px] uppercase">Real-Time Ingestion Logs</span>
+            </span>
+            <span class="text-[10px] text-emerald-400">Streaming active</span>
+          </div>
+          <div class="h-28 overflow-y-auto space-y-1 pt-1 no-scrollbar text-[11px]">
+            <p class="text-slate-400">[15:38:12] <span class="text-blue-400">INFO</span> Pipeline worker spawned on node <span class="text-slate-200">alpha-ingest-02</span></p>
+            <p class="text-slate-400">[15:38:14] <span class="text-emerald-400">SUCCESS</span> SAP table FLOC & EQUI indexed (1240 entities)</p>
+            <p class="text-slate-400">[15:38:22] <span class="text-blue-400">INFO</span> Loading CAD raster vector layers from main_plant_layout.pdf</p>
+            <p class="text-slate-400">[15:38:28] <span class="text-amber-400">WARN</span> Low OCR confidence (68%) on line segment 6"-FG-2001-CS between HEAT-EX-E-301 & SEPARATOR-S-402</p>
+            <p class="text-slate-400">[15:38:35] <span class="text-blue-400">INFO</span> Extracted 38 node connection candidates. Graph building in progress...</p>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ─────────────────────────────────────────────────────────────────────────
+         STEP 3 VIEW: EXTRACTED RELATIONSHIP REVIEW & VALIDATION
+         ───────────────────────────────────────────────────────────────────────── -->
+    <section id="stepView3" class="step-view hidden space-y-6">
+      
+      <!-- Section Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Plant Ops / P&ID Extracted Review</span>
+          </div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+            P&ID Diagram Extracted Relationships
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Verify automated AI node connections. Flagged items (<span class="text-amber-500 font-semibold">Low confidence &lt;70%</span>) can be reviewed directly with CAD snippet overlay.
+          </p>
+        </div>
+        
+        <!-- Primary Top CTA -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="goToStep(4)" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow cursor-pointer transition group">
+            <span>Proceed to Integrated View (4 Domains)</span>
+            <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Domain Navigation Tabs (from Screenshot 3) -->
+      <div class="flex items-center gap-2 border-b border-border dark:border-border-dark pb-2 overflow-x-auto no-scrollbar">
+        <button onclick="switchReviewTab('pnid', this)" class="review-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm cursor-pointer transition">
+          P&ID Diagram (38)
+        </button>
+        <button onclick="switchReviewTab('historian', this)" class="review-tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition">
+          Historian / Timeseries (48)
+        </button>
+        <button onclick="switchReviewTab('docs', this)" class="review-tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition">
+          Technical Docs (19)
+        </button>
+        <button onclick="switchReviewTab('sap', this)" class="review-tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition">
+          SAP Master Data (1,240)
+        </button>
+      </div>
+
+      <!-- Filter & Search Toolbar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-surface dark:bg-surface-dark p-3 rounded-xl border border-border dark:border-border-dark shadow-sm">
+        
+        <!-- Search Input -->
+        <div class="relative flex-1 max-w-md">
+          <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+          <input type="text" id="tableSearch" onkeyup="filterRelationships()" placeholder="Search source asset, destination, line no, piping..." class="w-full pl-9 pr-4 py-1.5 rounded-lg text-xs bg-surface-2 dark:bg-surface-dark-2 border border-border dark:border-border-dark text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-500 transition" />
+        </div>
+
+        <!-- Filter Badges -->
+        <div class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+          <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Confidence:</span>
+          <button onclick="filterConfidence('all', this)" class="conf-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 cursor-pointer">
+            All (38)
+          </button>
+          <button onclick="filterConfidence('high', this)" class="conf-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer">
+            High &ge;90% (32)
+          </button>
+          <button onclick="filterConfidence('low', this)" class="conf-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20 cursor-pointer flex items-center gap-1">
+            <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+            <span>Low Confidence (6)</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- High Density Relationship Table (from Screenshot 3) -->
+      <div class="bg-surface dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs" id="relationshipsTable">
+            
+            <!-- Table Header -->
+            <thead class="bg-surface-2 dark:bg-surface-dark-2 text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider border-b border-border dark:border-border-dark text-[11px]">
+              <tr>
+                <th class="py-3 px-4">Source Asset</th>
+                <th class="py-3 px-4">Destination Asset</th>
+                <th class="py-3 px-4">Piping Spec</th>
+                <th class="py-3 px-4">Line No</th>
+                <th class="py-3 px-4">Fluid</th>
+                <th class="py-3 px-4">Confidence</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+
+            <!-- Table Body -->
+            <tbody class="divide-y divide-border dark:divide-border-dark font-medium">
+              
+              <!-- Row 1: High Confidence (from SS 3) -->
+              <tr class="table-row hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition group" data-confidence="high">
+                <td class="py-3.5 px-4 font-bold text-blue-600 dark:text-blue-400 font-mono">
+                  VESSEL-V-101
+                </td>
+                <td class="py-3.5 px-4 font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                  PUMP-P-202A
+                </td>
+                <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                  CS-300-A1
+                </td>
+                <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                  3"-HC-1012-CS
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    HC
+                  </span>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <i data-lucide="check-circle-2" class="w-3 h-3"></i>
+                    98% High
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right">
+                  <div class="inline-flex items-center gap-1.5 opacity-90 group-hover:opacity-100">
+                    <button onclick="openDrawer('VESSEL-V-101', 'PUMP-P-202A', '98% High', '3-HC-1012-CS')" title="View CAD snippet" class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition cursor-pointer">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Edit relationship" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition cursor-pointer">
+                      <i data-lucide="edit-3" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Delete" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Row 2: Low Confidence Warning (from SS 3) -->
+              <tr class="table-row bg-amber-500/5 dark:bg-amber-500/5 hover:bg-amber-500/10 dark:hover:bg-amber-500/10 transition group" data-confidence="low">
+                <td class="py-3.5 px-4 font-bold text-blue-600 dark:text-blue-400 font-mono">
+                  HEAT-EX-E-301
+                </td>
+                <td class="py-3.5 px-4 font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                  SEPARATOR-S-402
+                </td>
+                <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                  CS-300-A1
+                </td>
+                <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                  6"-FG-2001-CS
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                    FG
+                  </span>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                    68% Low (!)
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right">
+                  <div class="inline-flex items-center gap-1.5 opacity-90 group-hover:opacity-100">
+                    <button onclick="openDrawer('HEAT-EX-E-301', 'SEPARATOR-S-402', '68% Low (!)', '6-FG-2001-CS')" title="Review Flagged CAD snippet" class="px-2 py-1 rounded-lg text-xs font-bold bg-amber-500 text-white hover:bg-amber-600 shadow-sm transition cursor-pointer flex items-center gap-1">
+                      <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                      <span>Inspect</span>
+                    </button>
+                    <button title="Edit relationship" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition cursor-pointer">
+                      <i data-lucide="edit-3" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Delete" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Row 3: Additional Realistic Row -->
+              <tr class="table-row hover:bg-blue-50/30 dark:hover:bg-blue-950/20 transition group" data-confidence="high">
+                <td class="py-3.5 px-4 font-bold text-blue-600 dark:text-blue-400 font-mono">
+                  COLUMN-C-201
+                </td>
+                <td class="py-3.5 px-4 font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                  REBOILER-RB-201
+                </td>
+                <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                  SS-150-B2
+                </td>
+                <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                  8"-VAP-2011-SS
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    VAP
+                  </span>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                    <i data-lucide="check-circle-2" class="w-3 h-3"></i>
+                    94% High
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right">
+                  <div class="inline-flex items-center gap-1.5 opacity-90 group-hover:opacity-100">
+                    <button onclick="openDrawer('COLUMN-C-201', 'REBOILER-RB-201', '94% High', '8-VAP-2011-SS')" title="View CAD snippet" class="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition cursor-pointer">
+                      <i data-lucide="eye" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Edit relationship" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition cursor-pointer">
+                      <i data-lucide="edit-3" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Delete" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Row 4: Low Confidence Row 2 -->
+              <tr class="table-row bg-amber-500/5 dark:bg-amber-500/5 hover:bg-amber-500/10 dark:hover:bg-amber-500/10 transition group" data-confidence="low">
+                <td class="py-3.5 px-4 font-bold text-blue-600 dark:text-blue-400 font-mono">
+                  DRUM-D-105
+                </td>
+                <td class="py-3.5 px-4 font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                  VALVE-XV-104
+                </td>
+                <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                  CS-600-A1
+                </td>
+                <td class="py-3.5 px-4 text-slate-700 dark:text-slate-300 font-mono">
+                  2"-W-1044-CS
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-extrabold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20">
+                    WATER
+                  </span>
+                </td>
+                <td class="py-3.5 px-4">
+                  <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                    <i data-lucide="alert-triangle" class="w-3 h-3"></i>
+                    62% Low (!)
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right">
+                  <div class="inline-flex items-center gap-1.5 opacity-90 group-hover:opacity-100">
+                    <button onclick="openDrawer('DRUM-D-105', 'VALVE-XV-104', '62% Low (!)', '2-W-1044-CS')" title="Review Flagged CAD snippet" class="px-2 py-1 rounded-lg text-xs font-bold bg-amber-500 text-white hover:bg-amber-600 shadow-sm transition cursor-pointer flex items-center gap-1">
+                      <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                      <span>Inspect</span>
+                    </button>
+                    <button title="Edit relationship" class="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition cursor-pointer">
+                      <i data-lucide="edit-3" class="w-4 h-4"></i>
+                    </button>
+                    <button title="Delete" class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer">
+                      <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+            </tbody>
+
+          </table>
+        </div>
+
+        <!-- Table Footer Pagination & Summary -->
+        <div class="p-4 bg-surface-2 dark:bg-surface-dark-2 border-t border-border dark:border-border-dark flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+          <div>Showing <span class="font-bold text-slate-900 dark:text-white">4</span> of <span class="font-bold text-slate-900 dark:text-white">38</span> relationships (2 flagged for verification)</div>
+          <div class="flex items-center gap-2">
+            <button class="px-3 py-1.5 rounded-lg bg-surface dark:bg-surface-dark border border-border dark:border-border-dark text-slate-600 dark:text-slate-300 hover:bg-surface-3 cursor-pointer transition disabled:opacity-50" disabled>Previous</button>
+            <button class="px-3 py-1.5 rounded-lg bg-surface dark:bg-surface-dark border border-border dark:border-border-dark text-slate-600 dark:text-slate-300 hover:bg-surface-3 cursor-pointer transition">Next</button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ─────────────────────────────────────────────────────────────────────────
+         STEP 4 VIEW: INTEGRATED DOMAIN INTELLIGENCE REVIEW & LOCK
+         ───────────────────────────────────────────────────────────────────────── -->
+    <section id="stepView4" class="step-view hidden space-y-6">
+      
+      <!-- Section Header -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Plant Ops / Integrated View</span>
+          </div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
+            Integrated Domain Intelligence Review
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            Cross-domain asset relationship & operational rule synthesis across all 4 operational domains.
+          </p>
+        </div>
+        
+        <!-- Primary Seal CTA -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button onclick="openModal('modalConfirmLock')" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-sm hover:shadow cursor-pointer transition">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+            <span>Confirm & Lock Integrated View</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Domain Category Tabs (from Screenshot 1) -->
+      <div class="flex items-center gap-2 border-b border-border dark:border-border-dark pb-2 overflow-x-auto no-scrollbar">
+        <button onclick="switchDomainTab('integrity', this)" class="domain-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm cursor-pointer transition flex items-center gap-2">
+          <i data-lucide="shield" class="w-3.5 h-3.5"></i>
+          <span>Integrity (3)</span>
+        </button>
+        <button onclick="switchDomainTab('reliability', this)" class="domain-tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition flex items-center gap-2">
+          <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+          <span>Reliability (3)</span>
+        </button>
+        <button onclick="switchDomainTab('production', this)" class="domain-tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition flex items-center gap-2">
+          <i data-lucide="factory" class="w-3.5 h-3.5"></i>
+          <span>Production (2)</span>
+        </button>
+        <button onclick="switchDomainTab('maintenance', this)" class="domain-tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition flex items-center gap-2">
+          <i data-lucide="wrench" class="w-3.5 h-3.5"></i>
+          <span>Maintenance (2)</span>
+        </button>
+      </div>
+
+      <!-- Domain Matrix & Rules Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <!-- Left 2 Cols: Cross-Domain Bindings Table -->
+        <div class="lg:col-span-2 bg-surface dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark p-5 shadow-sm space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <i data-lucide="git-merge" class="w-4 h-4 text-blue-500"></i>
+              <span>Active Multi-Domain Bindings for Integrity</span>
+            </h3>
+            <span class="text-[11px] px-2 py-0.5 rounded font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">Zero Conflicts</span>
+          </div>
+
+          <div class="space-y-3">
+            
+            <!-- Binding Card 1 -->
+            <div class="p-4 rounded-xl border border-border dark:border-border-dark bg-surface-2/40 dark:bg-surface-dark-2/40 hover:border-slate-400 transition space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">RULE-INT-01</span>
+                  <span class="text-xs font-bold text-slate-900 dark:text-white">Corrosion Allowance Threshold Binding</span>
+                </div>
+                <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Valid</span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Binds P&ID piping line <span class="font-mono text-slate-800 dark:text-slate-200">3"-HC-1012-CS</span> with SAP Equipment Master <span class="font-mono text-slate-800 dark:text-slate-200">EQ-400129</span> and Historian pressure transmitter <span class="font-mono text-slate-800 dark:text-slate-200">PT-1012</span>.
+              </p>
+            </div>
+
+            <!-- Binding Card 2 -->
+            <div class="p-4 rounded-xl border border-border dark:border-border-dark bg-surface-2/40 dark:bg-surface-dark-2/40 hover:border-slate-400 transition space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">RULE-INT-02</span>
+                  <span class="text-xs font-bold text-slate-900 dark:text-white">Overpressure Relief Path Verification</span>
+                </div>
+                <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Valid</span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Binds safety relief valve <span class="font-mono text-slate-800 dark:text-slate-200">PSV-201A</span> to flare header line <span class="font-mono text-slate-800 dark:text-slate-200">8"-FL-9001</span> with design burst envelope of 45 bar.
+              </p>
+            </div>
+
+            <!-- Binding Card 3 -->
+            <div class="p-4 rounded-xl border border-border dark:border-border-dark bg-surface-2/40 dark:bg-surface-dark-2/40 hover:border-slate-400 transition space-y-2">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">RULE-INT-03</span>
+                  <span class="text-xs font-bold text-slate-900 dark:text-white">Material Compatibility Cross-Check</span>
+                </div>
+                <span class="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold">Valid</span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400">
+                Verifies Carbon Steel CS-300 against hydrocarbon fluid spec HC at operating temperature of 145°C.
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Right 1 Col: Lock Status & Scope Summary (from Screenshot 1) -->
+        <div class="bg-surface dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark p-5 shadow-sm space-y-5 flex flex-col justify-between">
+          <div class="space-y-4">
+            <div class="w-12 h-12 rounded-2xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+              <i data-lucide="lock" class="w-6 h-6"></i>
+            </div>
+            
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Validation Scope & AI Readiness</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Seals cross-domain asset relationships & rules across all 4 operational domains for downstream symbolic reasoning & root cause analysis.
+              </p>
+            </div>
+
+            <div class="p-3.5 rounded-xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 text-xs text-slate-700 dark:text-slate-300 space-y-2">
+              <div class="font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1.5">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                <span>4 Domains Ready to Lock:</span>
+              </div>
+              <ul class="space-y-1 text-[11px] pl-5 list-disc text-slate-600 dark:text-slate-400">
+                <li>Integrity Rules (3 rules bound)</li>
+                <li>Reliability Bindings (3 assets connected)</li>
+                <li>Production Workflows (2 nodes mapped)</li>
+                <li>Maintenance Schedules (2 SOP citations)</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="pt-4 border-t border-border dark:border-border-dark">
+            <button onclick="openModal('modalConfirmLock')" class="w-full py-3 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md cursor-pointer transition flex items-center justify-center gap-2">
+              <i data-lucide="shield-check" class="w-4 h-4"></i>
+              <span>Confirm Integrated View Validation</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       FLOATING PIPELINE STATUS DOCK (Always visible minimal-click widget)
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <aside id="floatingDock" class="fixed bottom-4 right-4 z-20 bg-surface/95 dark:bg-surface-dark/95 backdrop-blur-md rounded-2xl border border-border dark:border-border-dark shadow-2xl p-3.5 max-w-xs w-full transition-all duration-300">
+    <div class="flex items-center justify-between gap-3 mb-2">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-blue-500 animate-pulse"></span>
+        <span class="text-xs font-bold text-slate-900 dark:text-white">Pipeline Active</span>
+      </div>
+      <div class="flex items-center gap-1">
+        <button onclick="openModal('modalPipelineProgress')" title="Expand to full dialog" class="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer">
+          <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+        </button>
+        <button onclick="document.getElementById('floatingDock').classList.add('hidden')" title="Dismiss dock" class="p-1 rounded text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer">
+          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </div>
+    
+    <div class="space-y-1.5 text-[11px]">
+      <div class="flex justify-between text-slate-500 dark:text-slate-400">
+        <span>P&ID Vector OCR Parsing</span>
+        <span class="font-mono font-bold text-blue-600 dark:text-blue-400">45%</span>
+      </div>
+      <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+        <div class="h-full bg-blue-600 rounded-full animate-pulse" style="width: 45%"></div>
+      </div>
+    </div>
+  </aside>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       SLIDE-OVER DRAWER: CAD SNIPPET & RELATIONSHIP INSPECTOR
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <div id="inspectorDrawerBackdrop" onclick="closeDrawer()" class="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-300"></div>
+  
+  <aside id="inspectorDrawer" class="drawer-content fixed top-0 right-0 bottom-0 z-50 w-full max-w-md sm:max-w-lg bg-surface dark:bg-surface-dark border-l border-border dark:border-border-dark shadow-2xl p-6 flex flex-col justify-between translate-x-full overflow-y-auto">
+    
+    <div class="space-y-6">
+      <!-- Drawer Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-border dark:border-border-dark">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+            <i data-lucide="scan-line" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 dark:text-white">CAD Relationship Inspector</h3>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">OCR Vector Layer & Line Segment Analysis</p>
+          </div>
+        </div>
+        <button onclick="closeDrawer()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Node Summary Pills -->
+      <div class="p-4 rounded-xl bg-surface-2 dark:bg-surface-dark-2 border border-border dark:border-border-dark space-y-3">
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-500">Source Asset</span>
+          <span id="drawerSourceAsset" class="font-mono font-bold text-blue-600 dark:text-blue-400">HEAT-EX-E-301</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-500">Destination Asset</span>
+          <span id="drawerDestAsset" class="font-mono font-bold text-emerald-600 dark:text-emerald-400">SEPARATOR-S-402</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-500">Line Specification</span>
+          <span id="drawerLineNo" class="font-mono font-bold text-slate-700 dark:text-slate-300">6"-FG-2001-CS</span>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <span class="font-bold text-slate-500">Confidence Score</span>
+          <span id="drawerConfidence" class="font-bold px-2 py-0.5 rounded text-[11px] bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">68% Low (!)</span>
+        </div>
+      </div>
+
+      <!-- Interactive CAD SVG Bounding Box Preview -->
+      <div class="space-y-2">
+        <div class="flex items-center justify-between text-xs font-bold uppercase tracking-wider text-slate-500">
+          <span>P&ID Vector CAD Crop</span>
+          <span class="text-blue-500 text-[11px] font-normal cursor-pointer hover:underline">Zoom In 100%</span>
+        </div>
+
+        <div class="relative rounded-xl border border-border dark:border-border-dark bg-slate-950 p-4 h-48 flex items-center justify-center overflow-hidden">
+          
+          <!-- Mock CAD Drawing Vector Lines -->
+          <svg class="w-full h-full text-slate-400" viewBox="0 0 400 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Grid Lines -->
+            <path d="M0 50 H400 M0 100 H400 M0 150 H400" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 4" />
+            <path d="M100 0 V200 M200 0 V200 M300 0 V200" stroke="#1e293b" stroke-width="1" stroke-dasharray="4 4" />
+            
+            <!-- Asset 1 Box (Heat Exchanger) -->
+            <rect x="40" y="70" width="80" height="60" rx="4" stroke="#3b82f6" stroke-width="2" fill="#1e3a8a22" />
+            <text x="50" y="105" fill="#93c5fd" font-size="10" font-family="monospace" font-weight="bold">E-301</text>
+            
+            <!-- Connecting Piping Line -->
+            <path d="M120 100 H260" stroke="#f59e0b" stroke-width="3" stroke-dasharray="2 2" />
+            
+            <!-- Flow Arrow -->
+            <polygon points="190,95 205,100 190,105" fill="#f59e0b" />
+            <text x="145" y="88" fill="#fcd34d" font-size="9" font-family="monospace">6"-FG-2001</text>
+
+            <!-- Asset 2 Box (Separator) -->
+            <rect x="260" y="60" width="90" height="80" rx="8" stroke="#10b981" stroke-width="2" fill="#064e3b22" />
+            <text x="275" y="105" fill="#6ee7b7" font-size="10" font-family="monospace" font-weight="bold">S-402</text>
+          </svg>
+
+          <!-- Bounding Tag Label -->
+          <div class="absolute bottom-2 left-2 px-2 py-1 rounded bg-slate-900/90 border border-slate-700 text-[10px] text-amber-400 font-mono">
+            ⚠ OCR Ambiguity: Line crosses bypass nozzle
+          </div>
+        </div>
+      </div>
+
+      <!-- Verification Override Controls -->
+      <div class="space-y-3">
+        <label class="block text-xs font-bold uppercase tracking-wider text-slate-500">
+          Manual Relationship Correction
+        </label>
+        <div class="space-y-2">
+          <input type="text" value="6-FG-2001-CS" class="w-full px-3 py-2 rounded-lg text-xs bg-surface-2 dark:bg-surface-dark-2 border border-border dark:border-border-dark text-slate-900 dark:text-white font-mono focus:outline-none focus:border-blue-500" />
+          <p class="text-[11px] text-slate-400">Override detected line number or re-map destination node.</p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Drawer Footer Actions -->
+    <div class="pt-6 border-t border-border dark:border-border-dark flex items-center gap-3">
+      <button onclick="closeDrawer()" class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-surface-2 dark:bg-surface-dark-2 text-slate-700 dark:text-slate-300 hover:bg-surface-3 cursor-pointer transition">
+        Cancel
+      </button>
+      <button onclick="approveRelationship()" class="flex-1 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow cursor-pointer transition flex items-center justify-center gap-1.5">
+        <i data-lucide="check" class="w-4 h-4"></i>
+        <span>Approve & Verify</span>
+      </button>
+    </div>
+
+  </aside>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       STANDALONE SHADCN MODAL 1: ADD NEW DATA INTEGRATION (From Screenshot 4)
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <div id="modalAddIntegration" class="modal-backdrop fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
+    <div class="modal-content w-full max-w-2xl bg-surface dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark shadow-modal p-6 sm:p-7 space-y-6 scale-95 transition-all duration-200">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white">Add New Data Integration</h3>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Select a source type to ingest into the vector knowledge graph.</p>
+        </div>
+        <button onclick="closeModal('modalAddIntegration')" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Connectors Grid (from Screenshot 4) -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+        
+        <!-- Card 1 -->
+        <div class="p-4 rounded-xl border border-border dark:border-border-dark bg-surface-2/40 dark:bg-surface-dark-2/40 hover:border-blue-400 cursor-pointer transition group">
+          <h4 class="font-bold text-xs text-slate-900 dark:text-white group-hover:text-blue-500 transition">Amazon S3 Bucket</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">PDF, CAD, and Image sync</p>
+        </div>
+
+        <!-- Card 2 (Active Selected) -->
+        <div class="p-4 rounded-xl border-2 border-blue-600 bg-blue-50/50 dark:bg-blue-950/30 cursor-pointer transition">
+          <h4 class="font-bold text-xs text-blue-600 dark:text-blue-400">P&ID Schematics</h4>
+          <p class="text-[11px] text-slate-600 dark:text-slate-300 mt-1">Vector CAD & Diagram parser</p>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="p-4 rounded-xl border border-border dark:border-border-dark bg-surface-2/40 dark:bg-surface-dark-2/40 hover:border-blue-400 cursor-pointer transition group">
+          <h4 class="font-bold text-xs text-slate-900 dark:text-white group-hover:text-blue-500 transition">SAP ERP</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Equipment & Asset Tables</p>
+        </div>
+
+        <!-- Card 4 -->
+        <div class="p-4 rounded-xl border border-border dark:border-border-dark bg-surface-2/40 dark:bg-surface-dark-2/40 hover:border-blue-400 cursor-pointer transition group">
+          <h4 class="font-bold text-xs text-slate-900 dark:text-white group-hover:text-blue-500 transition">OPC-UA / Historian</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Time-series SCADA logs</p>
+        </div>
+
+        <!-- Card 5 -->
+        <div class="p-4 rounded-xl border border-border dark:border-border-dark bg-surface-2/40 dark:bg-surface-dark-2/40 hover:border-blue-400 cursor-pointer transition group">
+          <h4 class="font-bold text-xs text-slate-900 dark:text-white group-hover:text-blue-500 transition">PostgreSQL DB</h4>
+          <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Relational operational DB</p>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-4 border-t border-border dark:border-border-dark flex items-center justify-end gap-3">
+        <button onclick="closeModal('modalAddIntegration')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition">
+          Cancel
+        </button>
+        <button onclick="closeModal('modalAddIntegration'); openModal('modalConfigurePnid')" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-sm cursor-pointer transition">
+          <span>Next Step</span>
+          <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       STANDALONE SHADCN MODAL 2: CONFIGURE P&ID SCHEMATIC SOURCE (From Screenshot 2)
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <div id="modalConfigurePnid" class="modal-backdrop fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
+    <div class="modal-content w-full max-w-3xl bg-surface dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark shadow-modal p-6 sm:p-7 space-y-6 scale-95 transition-all duration-200">
+      
+      <!-- Modal Header -->
+      <div class="flex items-start justify-between pb-3 border-b border-border dark:border-border-dark">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white">Configure P&ID Schematic Source</h3>
+        <button onclick="closeModal('modalConfigurePnid')" class="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- 2-Column Body (from Screenshot 2) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Left: Upload & Queued Files -->
+        <div class="space-y-4">
+          <div class="border-2 border-dashed border-border dark:border-border-dark hover:border-blue-500 rounded-xl p-6 text-center bg-surface-2/40 dark:bg-surface-dark-2/40 cursor-pointer transition">
+            <i data-lucide="file-up" class="w-7 h-7 mx-auto text-blue-500 mb-2"></i>
+            <p class="text-xs font-semibold text-slate-800 dark:text-slate-200">Drag files here or browse drive</p>
+            <p class="text-[10px] text-slate-400 mt-1">PDF, CAD, PNG (Up to 100MB)</p>
+          </div>
+
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-1.5">QUEUED FILES (1)</div>
+            <div class="flex items-center justify-between p-3 rounded-xl bg-surface-2 dark:bg-surface-dark-2 border border-border dark:border-border-dark">
+              <div class="flex items-center gap-2">
+                <i data-lucide="file-text" class="w-4 h-4 text-red-500"></i>
+                <span class="text-xs font-bold text-slate-900 dark:text-white">main_plant_layout.pdf</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] text-slate-400">2.4 MB &bull; Ready</span>
+                <i data-lucide="trash-2" class="w-4 h-4 text-slate-400 hover:text-red-500 cursor-pointer"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Target Extraction Schema & Ingestion Mode -->
+        <div class="space-y-4">
+          <div>
+            <h4 class="text-xs font-bold text-slate-900 dark:text-white">Target Extraction Schema</h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 mb-2.5">Toggle entities for automatic AI extraction:</p>
+            
+            <div class="flex flex-wrap gap-1.5">
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white cursor-pointer">Drawing Number</span>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white cursor-pointer">Line ID</span>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white cursor-pointer">Instrument Tag</span>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold bg-blue-600 text-white cursor-pointer">Revision</span>
+              <span class="px-3 py-1 rounded-full text-xs font-semibold border-2 border-dashed border-border dark:border-border-dark text-slate-400 hover:text-blue-500 cursor-pointer">+ Custom Key</span>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-border dark:border-border-dark">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">INGESTION MODE</h4>
+            <label class="flex items-center gap-2 text-xs font-semibold text-slate-800 dark:text-slate-200 cursor-pointer">
+              <input type="radio" checked class="text-blue-600" />
+              <span>Process unprocessed files only</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer (from Screenshot 2) -->
+      <div class="pt-4 border-t border-border dark:border-border-dark flex items-center justify-end gap-3">
+        <button onclick="closeModal('modalConfigurePnid')" class="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 cursor-pointer transition">
+          Cancel
+        </button>
+        <button onclick="closeModal('modalConfigurePnid'); openModal('modalPipelineProgress')" class="px-6 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow cursor-pointer transition">
+          Upload & Sync
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       STANDALONE SHADCN MODAL 3: PARALLEL DATA PIPELINE ORCHESTRATOR (From Screenshot 5)
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <div id="modalPipelineProgress" class="modal-backdrop fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
+    <div class="modal-content w-full max-w-2xl bg-surface dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark shadow-modal p-6 sm:p-7 space-y-6 scale-95 transition-all duration-200">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between pb-3 border-b border-border dark:border-border-dark">
+        <h3 class="text-base font-bold text-slate-900 dark:text-white">Parallel Data Pipeline Orchestrator</h3>
+        <div class="flex items-center gap-2 text-slate-400 text-xs">
+          <button onclick="closeModal('modalPipelineProgress')" class="hover:text-white cursor-pointer">Minimize _</button>
+          <button onclick="closeModal('modalPipelineProgress')" class="hover:text-white cursor-pointer"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+      </div>
+
+      <!-- Body: Progress Bars (from Screenshot 5) -->
+      <div class="space-y-4">
+        
+        <!-- Overall -->
+        <div class="p-4 rounded-xl bg-surface-2 dark:bg-surface-dark-2 border border-border dark:border-border-dark space-y-2">
+          <div class="flex justify-between text-xs font-bold">
+            <span class="uppercase tracking-wider text-slate-500">OVERALL PROCESSING PROGRESS</span>
+            <span class="text-blue-500 font-mono">60% (3/5 Complete)</span>
+          </div>
+          <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+            <div class="h-full bg-blue-600 rounded-full" style="width: 60%"></div>
+          </div>
+        </div>
+
+        <!-- Task 1 -->
+        <div class="p-4 rounded-xl border border-border dark:border-border-dark bg-surface-2/40 dark:bg-surface-dark-2/40 flex items-center justify-between">
+          <div>
+            <h4 class="text-xs font-bold text-slate-900 dark:text-white">SAP Master Data Connector</h4>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400">Indexed 1,240 records into Vector Store</p>
+          </div>
+          <span class="text-xs font-mono font-bold text-emerald-500">100% ✓</span>
+        </div>
+
+        <!-- Task 2 (Active) -->
+        <div class="p-4 rounded-xl border-2 border-blue-500/60 bg-blue-50/20 dark:bg-blue-950/20 space-y-2">
+          <div class="flex items-center justify-between">
+            <div>
+              <h4 class="text-xs font-bold text-slate-900 dark:text-white">P&ID Schematics (Main Plant Layout)</h4>
+              <p class="text-[11px] text-slate-500 dark:text-slate-400">Parsing CAD vector layers & OCR tag extraction...</p>
+            </div>
+            <span class="text-xs font-mono font-bold text-blue-500">45%</span>
+          </div>
+          <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+            <div class="h-full bg-blue-500 rounded-full animate-pulse" style="width: 45%"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-3 border-t border-border dark:border-border-dark flex items-center justify-end">
+        <button onclick="closeModal('modalPipelineProgress'); goToStep(3)" class="px-6 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow cursor-pointer transition">
+          Done
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       STANDALONE SHADCN MODAL 4: CONFIRM INTEGRATED VIEW VALIDATION (From Screenshot 1)
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <div id="modalConfirmLock" class="modal-backdrop fixed inset-0 z-50 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 opacity-0 pointer-events-none transition-all duration-200">
+    <div class="modal-content w-full max-w-lg bg-surface dark:bg-surface-dark rounded-2xl border border-border dark:border-border-dark shadow-modal p-6 sm:p-8 space-y-6 scale-95 transition-all duration-200">
+      
+      <!-- Modal Header (from Screenshot 1) -->
+      <div class="text-center space-y-2">
+        <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-600/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+          <i data-lucide="shield-check" class="w-7 h-7"></i>
+        </div>
+        <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">Confirm Integrated View Validation</h3>
+        <p class="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+          Are you sure you want to confirm multi-domain context bindings?<br />
+          Once confirmed, integrated data will be locked for AI engines.
+        </p>
+      </div>
+
+      <!-- Validation Scope Box (from Screenshot 1) -->
+      <div class="p-4 rounded-xl bg-surface-2 dark:bg-surface-dark-2 border border-border dark:border-border-dark space-y-1">
+        <div class="text-xs font-bold text-slate-900 dark:text-white">Validation Scope:</div>
+        <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+          Seals cross-domain asset relationships & rules across all 4 operational domains.
+        </p>
+      </div>
+
+      <!-- Modal Footer (from Screenshot 1) -->
+      <div class="flex items-center justify-center gap-3 pt-2">
+        <button onclick="closeModal('modalConfirmLock')" class="w-1/2 py-2.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-surface-2 dark:bg-surface-dark-2 hover:bg-surface-3 cursor-pointer transition">
+          Cancel
+        </button>
+        <button onclick="executeLockConfirmation()" id="confirmLockBtn" class="w-1/2 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-md cursor-pointer transition flex items-center justify-center gap-2">
+          <span>Confirm & Lock Integrated View</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════════════════════════════════════════
+       INTERACTIVE JAVASCRIPT LOGIC
+       ═══════════════════════════════════════════════════════════════════════════ -->
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Step Navigation
+    function goToStep(stepNumber) {
+      // Hide all step views
+      document.querySelectorAll('.step-view').forEach(view => view.classList.add('hidden'));
+      
+      // Show selected view
+      const target = document.getElementById(`stepView${stepNumber}`);
+      if (target) target.classList.remove('hidden');
+
+      // Update Stepper Bar styling
+      for (let i = 1; i <= 4; i++) {
+        const btn = document.getElementById(`stepBtn${i}`);
+        if (!btn) continue;
+        if (i === stepNumber) {
+          btn.className = "step-btn group flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800";
+        } else {
+          btn.className = "step-btn group flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-surface-2 dark:hover:bg-surface-dark-2 transition cursor-pointer";
+        }
+      }
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Modal Manager
+    function openModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (!modal) return;
+      modal.classList.remove('pointer-events-none', 'opacity-0');
+      modal.classList.add('opacity-100');
+      const content = modal.querySelector('.modal-content');
+      if (content) {
+        content.classList.remove('scale-95');
+        content.classList.add('scale-100');
+      }
+    }
+
+    function closeModal(modalId) {
+      const modal = document.getElementById(modalId);
+      if (!modal) return;
+      modal.classList.remove('opacity-100');
+      modal.classList.add('opacity-0', 'pointer-events-none');
+      const content = modal.querySelector('.modal-content');
+      if (content) {
+        content.classList.remove('scale-100');
+        content.classList.add('scale-95');
+      }
+    }
+
+    // Modals Menu Dropdown Toggle
+    function toggleModalMenu() {
+      const menu = document.getElementById('modalsMenuDropdown');
+      menu.classList.toggle('hidden');
+    }
+
+    // Drawer Manager
+    function openDrawer(source, dest, conf, line) {
+      document.getElementById('drawerSourceAsset').innerText = source;
+      document.getElementById('drawerDestAsset').innerText = dest;
+      document.getElementById('drawerConfidence').innerText = conf;
+      document.getElementById('drawerLineNo').innerText = line;
+
+      const backdrop = document.getElementById('inspectorDrawerBackdrop');
+      const drawer = document.getElementById('inspectorDrawer');
+
+      backdrop.classList.remove('pointer-events-none', 'opacity-0');
+      backdrop.classList.add('opacity-100');
+
+      drawer.classList.remove('translate-x-full');
+      drawer.classList.add('translate-x-0');
+    }
+
+    function closeDrawer() {
+      const backdrop = document.getElementById('inspectorDrawerBackdrop');
+      const drawer = document.getElementById('inspectorDrawer');
+
+      backdrop.classList.remove('opacity-100');
+      backdrop.classList.add('opacity-0', 'pointer-events-none');
+
+      drawer.classList.remove('translate-x-0');
+      drawer.classList.add('translate-x-full');
+    }
+
+    function approveRelationship() {
+      alert('Relationship verified and updated with high confidence tag!');
+      closeDrawer();
+    }
+
+    // Toggle Schema Chips
+    function toggleChip(btn) {
+      btn.classList.toggle('bg-blue-600');
+      btn.classList.toggle('text-white');
+      btn.classList.toggle('bg-surface-2');
+      btn.classList.toggle('text-slate-600');
+    }
+
+    function addCustomKeyPrompt() {
+      const customKey = prompt("Enter Custom Key name for AI extraction:", "Flange Rating");
+      if (customKey) {
+        alert(`Custom extraction key "${customKey}" added to schema!`);
+      }
+    }
+
+    // Connector Card Selection
+    function selectConnectorCard(card, type) {
+      document.querySelectorAll('.connector-card').forEach(c => {
+        c.className = "connector-card p-4 rounded-xl border border-border dark:border-border-dark bg-surface dark:bg-surface-dark hover:border-slate-400 dark:hover:border-slate-500 cursor-pointer transition-all duration-200 hover:shadow-card-hover group relative";
+        const badge = c.querySelector('.absolute.-top-2');
+        if (badge) badge.remove();
+      });
+      card.className = "connector-card active-connector p-4 rounded-xl border-2 border-blue-600 dark:border-blue-500 bg-blue-50/50 dark:bg-blue-950/20 cursor-pointer transition-all duration-200 shadow-glow-blue relative";
+    }
+
+    // Review Tab Switching
+    function switchReviewTab(type, btn) {
+      document.querySelectorAll('.review-tab-btn').forEach(b => {
+        b.className = "review-tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition";
+      });
+      btn.className = "review-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm cursor-pointer transition";
+    }
+
+    // Domain Tab Switching
+    function switchDomainTab(domain, btn) {
+      document.querySelectorAll('.domain-tab-btn').forEach(b => {
+        b.className = "domain-tab-btn px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer transition flex items-center gap-2";
+      });
+      btn.className = "domain-tab-btn px-4 py-2 rounded-xl text-xs font-bold bg-blue-600 text-white shadow-sm cursor-pointer transition flex items-center gap-2";
+    }
+
+    // Table Filtering
+    function filterRelationships() {
+      const input = document.getElementById('tableSearch').value.toLowerCase();
+      const rows = document.querySelectorAll('#relationshipsTable tbody tr');
+      rows.forEach(row => {
+        const text = row.innerText.toLowerCase();
+        row.style.display = text.includes(input) ? '' : 'none';
+      });
+    }
+
+    function filterConfidence(type, btn) {
+      document.querySelectorAll('.conf-filter-btn').forEach(b => {
+        b.className = "conf-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-surface-2 dark:hover:bg-surface-dark-2 cursor-pointer";
+      });
+      btn.className = "conf-filter-btn px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 cursor-pointer";
+
+      const rows = document.querySelectorAll('#relationshipsTable tbody tr');
+      rows.forEach(row => {
+        const conf = row.getAttribute('data-confidence');
+        if (type === 'all' || conf === type) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      });
+    }
+
+    // Theme Toggle
+    function toggleTheme() {
+      document.documentElement.classList.toggle('dark');
+    }
+
+    // Skeleton Mode Toggle
+    let skeletonActive = false;
+    function toggleSkeleton() {
+      skeletonActive = !skeletonActive;
+      document.getElementById('skeletonBtnText').innerText = skeletonActive ? 'Skeleton: On' : 'Skeleton: Off';
+      
+      const rows = document.querySelectorAll('#relationshipsTable tbody tr td');
+      rows.forEach(td => {
+        if (skeletonActive) {
+          td.dataset.original = td.innerHTML;
+          td.innerHTML = '<div class="skeleton-box h-4 w-24 my-1"></div>';
+        } else if (td.dataset.original) {
+          td.innerHTML = td.dataset.original;
+        }
+      });
+      lucide.createIcons();
+    }
+
+    // Lock Confirmation Simulation
+    function executeLockConfirmation() {
+      const btn = document.getElementById('confirmLockBtn');
+      btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i><span>Locking Context...</span>';
+      lucide.createIcons();
+      setTimeout(() => {
+        closeModal('modalConfirmLock');
+        alert('🎉 Integrated View Successfully Validated & Locked for AI Engines!');
+        btn.innerHTML = '<span>Confirm & Lock Integrated View</span>';
+      }, 1000);
+    }
+
+    // Close popups when clicking outside
+    window.addEventListener('click', (e) => {
+      const menuBtn = document.getElementById('modalsMenuBtn');
+      const menu = document.getElementById('modalsMenuDropdown');
+      if (menu && menuBtn && !menuBtn.contains(e.target) && !menu.contains(e.target)) {
+        menu.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
