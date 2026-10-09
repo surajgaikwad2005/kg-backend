@@ -1,4 +1,0 @@
-psycopg[binary,pool]
-azure-identity
-fastapi
-uvicorn
