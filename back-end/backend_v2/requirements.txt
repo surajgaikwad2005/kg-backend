@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+psycopg[binary,pool]
+azure-identity
+pydantic
+msal
+pyjwt
+bcrypt
