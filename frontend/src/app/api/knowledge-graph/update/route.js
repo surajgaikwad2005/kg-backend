@@ -1,7 +1,0 @@
-import { createProxy } from "@/src/app/api/_lib/proxy";
-
-export const { POST, DELETE } = createProxy({
-    backend: "KNOWLEDGE_GRAPH",
-    path: "/p1/knowledgeGraph/graph/updateGraph",
-    methods: ["POST", "DELETE"],
-});
