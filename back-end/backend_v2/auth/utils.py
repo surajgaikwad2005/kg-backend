@@ -2,67 +2,36 @@
 auth/utils.py
 
 Microsoft Entra ID authentication logic.
+Returns the Entra access token and refresh token.
 """
-
-from fastapi import HTTPException
 
 from utils import (
     get_sso_authorization_url,
     get_conf,
-    exchange_code_for_entra_claims,
-    create_access_token,
-    create_refresh_token,
+    exchange_code_for_entra_tokens,
+    refresh_entra_access_token,
 )
 
 
-# ============================================================
-# Generate Microsoft Entra Login URL
-# ============================================================
-
 def get_sso_login_url() -> dict:
-    """
-    Generate Microsoft Entra authorization URL.
-    """
-
-    login_url = get_sso_authorization_url()
 
     return {
         "status_code": 200,
         "success": True,
         "data": {
-            "login_url": login_url,
+            "login_url": get_sso_authorization_url(),
             "redirect_uri": get_conf("azure_sso", "redirect_uri"),
-            "scope": ["User.Read"],
             "provider": "microsoft_entra_id",
         },
     }
 
 
-# ============================================================
-# Build FastAPI JWT tokens from Entra claims
-# ============================================================
+def authenticate_entra_code(code: str, state: str = None) -> dict:
 
-def _issue_api_tokens(claims: dict) -> dict:
+    result = exchange_code_for_entra_tokens(code, state)
 
-    user_id = (
-        claims.get("oid")
-        or claims.get("sub")
-        or claims.get("preferred_username")
-    )
-
-    if not user_id:
-        raise HTTPException(
-            status_code=401,
-            detail="Unable to identify Entra user"
-        )
-
-    email = (
-        claims.get("preferred_username")
-        or claims.get("email")
-        or claims.get("upn")
-    )
-
-    name = claims.get("name") or email or str(user_id)
+    claims = result.get("id_token_claims") or {}
+    email = claims.get("preferred_username") or claims.get("email")
 
     return {
         "status_code": 200,
@@ -70,34 +39,32 @@ def _issue_api_tokens(claims: dict) -> dict:
         "message": "Authentication successful",
         "data": {
             "user": {
-                "id": str(user_id),
-                "name": name,
+                "id": claims.get("oid") or claims.get("sub"),
+                "name": claims.get("name") or email,
                 "email": email,
                 "provider": "microsoft_entra_id",
             },
-            "access_token": create_access_token(str(user_id)),
-            "refresh_token": create_refresh_token(str(user_id)),
+            "access_token": result["access_token"],
+            "refresh_token": result.get("refresh_token"),
             "token_type": "bearer",
+            "expires_in": result.get("expires_in"),
         },
     }
 
 
-# ============================================================
-# Login code -> Entra -> FastAPI JWT   (NEW)
-# ============================================================
+def refresh_entra_tokens(refresh_token: str) -> dict:
 
-def authenticate_entra_code(code: str, state: str = None) -> dict:
-    """
-    Exchange the login code for Entra claims,
-    then create FastAPI JWT tokens.
-    """                                                  
+    result = refresh_entra_access_token(refresh_token)
 
-    claims = exchange_code_for_entra_claims(code, state)
-
-    return _issue_api_tokens(claims)
-
-
-# ============================================================
-# Entra access token -> FastAPI JWT
-# ============================================================
-
+    return {
+        "status_code": 200,
+        "success": True,
+        "message": "Token refreshed",
+        "data": {
+            "access_token": result["access_token"],
+            # Entra may rotate the refresh token; keep the newest one
+            "refresh_token": result.get("refresh_token") or refresh_token,
+            "token_type": "bearer",
+            "expires_in": result.get("expires_in"),
+        },
+    }

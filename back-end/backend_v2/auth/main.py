@@ -7,6 +7,7 @@ Microsoft Entra ID authentication routes.
 from typing import Optional
 
 from fastapi import APIRouter, Body, HTTPException, Query
+from utils import refresh_entra_access_token
 
 from auth.utils import (
     get_sso_login_url,
@@ -41,4 +42,16 @@ def callback(
 
     return authenticate_entra_code(code, state)
 
+@router.post("/refresh")
+def refresh(account_id: str = Body(..., embed=True)):
+    result = refresh_entra_access_token(account_id)
+    return {
+        "status_code": 200,
+        "success": True,
+        "data": {
+            "access_token": result["access_token"],
+            "token_type": "bearer",
+            "expires_in": result.get("expires_in"),
+        },
+    }
 

@@ -1,16 +1,14 @@
 """
 utils.py
 
-Central Hub for shared logic across the project.
+Central hub for shared logic.
 
 Contains:
-  - Configuration Loader
-  - Microsoft Entra ID / MSAL SSO Logic
-  - Password Hashing
-  - JWT Token Generation & Verification
-  - Microsoft Entra Access Token Validation
-  - Route Guard Dependency
-  - Standard Response Formatters
+  - Configuration loader
+  - Microsoft Entra SSO (MSAL) login and code exchange
+  - Microsoft Entra access token validation
+  - Route guard dependency
+  - Standard response formatters
 """
 
 import os
@@ -18,50 +16,35 @@ import re
 import configparser
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
-from typing import Any, Optional, Dict
+from typing import Any, Optional
 
 import msal
 import bcrypt
 import jwt
+from jwt import PyJWKClient
 
 from fastapi import Header, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import JSONResponse
 
 
-# ============================================================
-# EXPORTS
-# ============================================================
-
 __all__ = [
     "get_conf",
-
-    # Response helpers
     "format_response",
     "success_response",
     "unauthorized_response",
     "server_error_response",
-
-    # Password
     "PASSWORD_RULE",
     "validate_password_strength",
     "hash_password",
     "verify_password",
-
-    # JWT
-    "create_access_token",
-    "create_refresh_token",
-    "decode_token",
-
-    # Authentication dependency
     "get_current_user_id",
-
-    # Entra SSO
     "make_sso_state",
     "verify_sso_state",
     "get_msal_client_app",
     "get_sso_authorization_url",
-    "exchange_code_for_entra_claims",   # NEW
+    "exchange_code_for_entra_tokens",
+    "refresh_entra_access_token",
     "validate_entra_access_token",
 ]
 
@@ -79,10 +62,7 @@ if CONFIG_FILE_PATH.exists():
 
 
 def get_conf(section: str, key: str, fallback: Any = None) -> Any:
-    """
-    Read configuration from config.ini.
-    If missing, the environment variable SECTION_KEY is checked.
-    """
+    """Read config.ini first, then the environment variable SECTION_KEY."""
 
     if _config.has_section(section) and _config.has_option(section, key):
         return _config.get(section, key)
@@ -91,32 +71,60 @@ def get_conf(section: str, key: str, fallback: Any = None) -> Any:
 
 
 # ============================================================
-# JWT CONFIGURATION
+# ENTRA CONFIGURATION
 # ============================================================
 
+# Only used to sign the short-lived login "state" (CSRF protection).
+# It is NOT used to create access or refresh tokens.
 SECRET_KEY = get_conf(
     "jwt", "secret_key",
     fallback="dev-jwt-secret-replace-in-production"
 )
-
-ALGORITHM = get_conf("jwt", "algorithm", fallback="HS256")
-
-ACCESS_EXPIRE_MINUTES = int(
-    get_conf("jwt", "access_expire_minutes", fallback=30)
-)
-
-REFRESH_EXPIRE_DAYS = int(
-    get_conf("jwt", "refresh_expire_days", fallback=7)
-)
-
-
-# ============================================================
-# ENTRA CONFIGURATION
-# ============================================================
-
+ALGORITHM = "HS256"
 STATE_EXPIRE_SECONDS = 600
 
-SCOPES = ["User.Read"]
+REQUIRED_SCOPE = get_conf("azure_sso", "required_scope", fallback="access_as_user")
+
+
+def _get_client_id() -> Optional[str]:
+    return (
+        get_conf("azure_sso", "client_id")
+        or get_conf("azure_sso", "entra_client_id")
+    )
+
+
+def _get_tenant_id() -> Optional[str]:
+    return (
+        get_conf("azure_sso", "tenant_id")
+        or get_conf("azure_sso", "entra_tenant_id")
+    )
+
+
+def _get_redirect_uri() -> str:
+
+    redirect_uri = get_conf("azure_sso", "redirect_uri")
+
+    if not redirect_uri:
+        raise HTTPException(
+            status_code=503,
+            detail="SSO is not configured: missing redirect_uri in config.ini"
+        )
+
+    return redirect_uri
+
+
+def _get_scopes() -> list:
+    """Scope for YOUR API, so the access token has aud = your API."""
+
+    client_id = _get_client_id()
+
+    if not client_id:
+        raise HTTPException(
+            status_code=503,
+            detail="SSO is not configured: missing client_id in config.ini"
+        )
+
+    return [f"api://{client_id}/{REQUIRED_SCOPE}"]
 
 
 # ============================================================
@@ -174,7 +182,7 @@ def server_error_response(
 
 
 # ============================================================
-# PASSWORD SECURITY
+# PASSWORD HELPERS (not used by the Entra flow)
 # ============================================================
 
 PASSWORD_RULE = re.compile(
@@ -190,14 +198,11 @@ def validate_password_strength(password: str) -> bool:
 
 
 def hash_password(password: str) -> str:
-
     hashed = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
-
     return hashed.decode("utf-8")
 
 
 def verify_password(password: str, hashed_password: str) -> bool:
-
     try:
         return bcrypt.checkpw(
             password.encode("utf-8"),
@@ -208,72 +213,233 @@ def verify_password(password: str, hashed_password: str) -> bool:
 
 
 # ============================================================
-# JWT TOKEN CREATION
+# SSO STATE (CSRF protection)
 # ============================================================
 
-def _create_token(
-    user_id: str,
-    token_type: str,
-    expires_delta: timedelta
-) -> str:
+def make_sso_state() -> str:
+    """Create a short-lived signed value sent to Entra and checked on return."""
 
-    payload = {
-        "user_id": str(user_id),
-        "type": token_type,
-        "exp": datetime.now(timezone.utc) + expires_delta
-    }
+    now = datetime.now(timezone.utc)
 
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def create_access_token(user_id: str) -> str:
-
-    return _create_token(
-        user_id=user_id,
-        token_type="access",
-        expires_delta=timedelta(minutes=ACCESS_EXPIRE_MINUTES)
+    return jwt.encode(
+        {
+            "typ": "sso_state",
+            "iat": now,
+            "exp": now + timedelta(seconds=STATE_EXPIRE_SECONDS),
+        },
+        SECRET_KEY,
+        algorithm=ALGORITHM,
     )
 
 
-def create_refresh_token(user_id: str) -> str:
-
-    return _create_token(
-        user_id=user_id,
-        token_type="refresh",
-        expires_delta=timedelta(days=REFRESH_EXPIRE_DAYS)
-    )
-
-
-# ============================================================
-# JWT TOKEN VALIDATION
-# ============================================================
-
-def decode_token(token: str, expected_type: str = "access") -> str:
+def verify_sso_state(state: str) -> None:
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(state, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        raise HTTPException(status_code=400, detail="Invalid or expired state")
+
+    if payload.get("typ") != "sso_state":
+        raise HTTPException(status_code=400, detail="Invalid state")
+
+
+# ============================================================
+# MSAL CLIENT
+# ============================================================
+
+_msal_app = None
+
+
+def get_msal_client_app():
+    """One shared MSAL app for the whole server run, so its token cache
+    (which holds the refresh token) is not thrown away between requests."""
+
+    global _msal_app
+
+    if _msal_app is not None:
+        return _msal_app
+
+    client_id = _get_client_id()
+    tenant_id = _get_tenant_id()
+    client_secret = get_conf("azure_sso", "client_secret")
+
+    if not client_id:
+        raise HTTPException(
+            status_code=503,
+            detail="SSO is not configured: missing client_id in config.ini"
+        )
+
+    if not tenant_id:
+        raise HTTPException(
+            status_code=503,
+            detail="SSO is not configured: missing tenant_id in config.ini"
+        )
+
+    if not client_secret:
+        raise HTTPException(
+            status_code=503,
+            detail="SSO is not configured: missing client_secret in config.ini"
+        )
+
+    _msal_app = msal.ConfidentialClientApplication(
+        client_id=client_id,
+        client_credential=client_secret,
+        authority=f"https://login.microsoftonline.com/{tenant_id}",
+    )
+
+    return _msal_app
+
+
+# ============================================================
+# LOGIN URL
+# ============================================================
+
+def get_sso_authorization_url() -> str:
+
+    return get_msal_client_app().get_authorization_request_url(
+        scopes=_get_scopes(),
+        state=make_sso_state(),
+        redirect_uri=_get_redirect_uri(),
+    )
+
+
+# ============================================================
+# EXCHANGE LOGIN CODE FOR ENTRA TOKENS
+# ============================================================
+
+def exchange_code_for_entra_tokens(code: str, state: Optional[str] = None) -> dict:
+
+    if not code:
+        raise HTTPException(status_code=400, detail="Missing authorization code")
+
+    if not state:
+        raise HTTPException(status_code=400, detail="Missing state")
+
+    verify_sso_state(state)
+
+    app = get_msal_client_app()
+
+    result = app.acquire_token_by_authorization_code(
+        code,
+        scopes=_get_scopes(),
+        redirect_uri=_get_redirect_uri(),
+    )
+
+    if "error" in result:
+        raise HTTPException(
+            status_code=401,
+            detail=result.get("error_description", "Entra login failed"),
+        )
+
+    # MSAL Python hides the refresh token from the returned result and keeps
+    # it in its own token cache, so read it from there.
+    claims = result.get("id_token_claims") or {}
+    home_account_id = f"{claims.get('oid')}.{claims.get('tid')}"
+
+    refresh_tokens = app.token_cache.find(
+        msal.TokenCache.CredentialType.REFRESH_TOKEN,
+        query={"home_account_id": home_account_id},
+    )
+
+    if not refresh_tokens:
+        # Fallback: any refresh token for the account MSAL just cached
+        for account in app.get_accounts():
+            refresh_tokens = app.token_cache.find(
+                msal.TokenCache.CredentialType.REFRESH_TOKEN,
+                query={"home_account_id": account.get("home_account_id")},
+            )
+            if refresh_tokens:
+                break
+
+    result["refresh_token"] = (
+        refresh_tokens[0]["secret"] if refresh_tokens else None
+    )
+
+    return result
+
+
+# ============================================================
+# REFRESH: new Entra access token from a refresh token
+# ============================================================
+
+def refresh_entra_access_token(refresh_token: str) -> dict:
+
+    if not refresh_token:
+        raise HTTPException(status_code=400, detail="Missing refresh token")
+
+    result = get_msal_client_app().acquire_token_by_refresh_token(
+        refresh_token,
+        scopes=_get_scopes(),
+    )
+
+    if "error" in result:
+        raise HTTPException(
+            status_code=401,
+            detail=result.get("error_description", "Token refresh failed"),
+        )
+
+    return result
+
+
+# ============================================================
+# MICROSOFT ENTRA ACCESS TOKEN VALIDATION
+# ============================================================
+
+_jwk_client: Optional[PyJWKClient] = None
+
+
+def validate_entra_access_token(token: str) -> dict:
+    """
+    Validate an Entra access token issued for THIS API:
+    signature (Microsoft public keys), issuer, audience, expiry, scope.
+    """
+
+    global _jwk_client
+
+    tenant_id = _get_tenant_id()
+    client_id = _get_client_id()
+
+    if not tenant_id or not client_id:
+        raise HTTPException(
+            status_code=503,
+            detail="Entra tenant_id or client_id is not configured"
+        )
+
+    if _jwk_client is None:
+        _jwk_client = PyJWKClient(
+            f"https://login.microsoftonline.com/{tenant_id}/discovery/v2.0/keys",
+            cache_keys=True,
+        )
+
+    try:
+        signing_key = _jwk_client.get_signing_key_from_jwt(token)
+
+        claims = jwt.decode(
+            token,
+            signing_key.key,
+            algorithms=["RS256"],
+            audience=[client_id, f"api://{client_id}"],
+            issuer=[
+                f"https://login.microsoftonline.com/{tenant_id}/v2.0",
+                f"https://sts.windows.net/{tenant_id}/",
+            ],
+            options={"require": ["exp", "aud", "iss"]},
+        )
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
 
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+    except jwt.PyJWTError as e:
+        # Temporary: shows which check failed (audience, issuer, signature...).
+        # Change to detail="Invalid token" once everything works.
+        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
 
-    if payload.get("type") != expected_type:
-        raise HTTPException(
-            status_code=401,
-            detail=f"Expected a {expected_type} token"
-        )
+    scopes = (claims.get("scp") or "").split()
 
-    user_id = payload.get("user_id")
+    if REQUIRED_SCOPE not in scopes:
+        raise HTTPException(status_code=403, detail="Missing required scope")
 
-    if not user_id:
-        raise HTTPException(
-            status_code=401,
-            detail="User ID missing from token"
-        )
-
-    return str(user_id)
+    return claims
 
 
 # ============================================================
@@ -302,273 +468,11 @@ def get_current_user_id(
             detail="Missing or invalid Bearer authorization token"
         )
 
-    return decode_token(token, expected_type="access")
+    claims = validate_entra_access_token(token)
 
+    user_id = claims.get("oid") or claims.get("sub")
 
-# ============================================================
-# MICROSOFT ENTRA SSO STATE
-# ============================================================
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User ID missing from token")
 
-def make_sso_state() -> str:
-
-    payload = {
-        "type": "sso_state",
-        "exp": datetime.now(timezone.utc)
-        + timedelta(seconds=STATE_EXPIRE_SECONDS)
-    }
-
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
-
-
-def verify_sso_state(state: str) -> None:
-
-    try:
-        payload = jwt.decode(state, SECRET_KEY, algorithms=[ALGORITHM])
-
-    except jwt.PyJWTError:
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid or expired SSO state"
-        )
-
-    if payload.get("type") != "sso_state":
-        raise HTTPException(
-            status_code=400,
-            detail="Invalid SSO state type"
-        )
-
-
-# ============================================================
-# ENTRA CONFIG HELPERS (NEW)
-# ============================================================
-
-def _get_client_id() -> Optional[str]:
-    return (
-        get_conf("azure_sso", "client_id")
-        or get_conf("azure_sso", "entra_client_id")
-    )
-
-
-def _get_tenant_id() -> Optional[str]:
-    return (
-        get_conf("azure_sso", "tenant_id")
-        or get_conf("azure_sso", "entra_tenant_id")
-    )
-
-
-def _get_redirect_uri() -> str:
-
-    redirect_uri = get_conf("azure_sso", "redirect_uri")
-
-    if not redirect_uri:
-        raise HTTPException(
-            status_code=503,
-            detail="SSO is not configured: missing redirect_uri in config.ini"
-        )
-
-    return redirect_uri
-
-
-# ============================================================
-# MSAL CLIENT (CHANGED: Confidential client + client secret)
-# ============================================================
-
-def get_msal_client_app():
-
-    client_id = _get_client_id()
-    tenant_id = _get_tenant_id()
-    client_secret = get_conf("azure_sso", "client_secret")
-
-    if not client_id:
-        raise HTTPException(
-            status_code=503,
-            detail="SSO is not configured: missing client_id in config.ini"
-        )
-
-    if not tenant_id:
-        raise HTTPException(
-            status_code=503,
-            detail="SSO is not configured: missing tenant_id in config.ini"
-        )
-
-    if not client_secret:
-        raise HTTPException(
-            status_code=503,
-            detail="SSO is not configured: missing client_secret in config.ini"
-        )
-
-    return msal.ConfidentialClientApplication(
-        client_id=client_id,
-        client_credential=client_secret,
-        authority=f"https://login.microsoftonline.com/{tenant_id}"
-    )
-
-
-# ============================================================
-# MICROSOFT ENTRA LOGIN URL (CHANGED: no chatgpt.com fallback)
-# ============================================================
-
-def get_sso_authorization_url() -> str:
-
-    app = get_msal_client_app()
-
-    return app.get_authorization_request_url(
-        scopes=SCOPES,
-        state=make_sso_state(),
-        redirect_uri=_get_redirect_uri()
-    )
-
-
-# ============================================================
-# EXCHANGE LOGIN CODE FOR ENTRA CLAIMS (NEW)
-# ============================================================
-
-def exchange_code_for_entra_claims(
-    code: str,
-    state: Optional[str] = None
-) -> dict:
-    """
-    Exchange the Entra authorization code for tokens.
-    MSAL validates the ID token, so id_token_claims can be trusted.
-    """
-
-    if not code:
-        raise HTTPException(status_code=400, detail="Missing authorization code")
-
-    if state:
-        verify_sso_state(state)
-
-    app = get_msal_client_app()
-
-    result = app.acquire_token_by_authorization_code(
-        code,
-        scopes=SCOPES,
-        redirect_uri=_get_redirect_uri()
-    )
-
-    if "error" in result:
-        raise HTTPException(
-            status_code=401,
-            detail=result.get("error_description", "Entra login failed")
-        )
-
-    claims = result.get("id_token_claims")
-
-    if not claims:
-        raise HTTPException(
-            status_code=401,
-            detail="Entra did not return user claims"
-        )
-
-    return claims
-
-
-# ============================================================
-# MICROSOFT ENTRA ACCESS TOKEN VALIDATION
-# (unchanged logic; works only for tokens with aud = your client_id)
-# ============================================================
-
-def validate_entra_access_token(access_token: str) -> dict:
-    """
-    Validate a Microsoft Entra access token:
-    signature, issuer, audience, expiration.
-    """
-
-    if not access_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Missing Microsoft Entra access token"
-        )
-
-    tenant_id = _get_tenant_id()
-    client_id = _get_client_id()
-
-    if not tenant_id:
-        raise HTTPException(status_code=503, detail="Missing Entra tenant_id")
-
-    if not client_id:
-        raise HTTPException(status_code=503, detail="Missing Entra client_id")
-
-    discovery_url = (
-        "https://login.microsoftonline.com/"
-        f"{tenant_id}/v2.0/.well-known/openid-configuration"
-    )
-
-    try:
-        discovery_response = requests.get(discovery_url, timeout=10)
-        discovery_response.raise_for_status()
-        discovery = discovery_response.json()
-
-    except Exception:
-        raise HTTPException(
-            status_code=503,
-            detail="Unable to retrieve Microsoft Entra configuration"
-        )
-
-    jwks_uri = discovery.get("jwks_uri")
-
-    if not jwks_uri:
-        raise HTTPException(
-            status_code=503,
-            detail="Microsoft Entra signing keys unavailable"
-        )
-
-    try:
-        jwks_response = requests.get(jwks_uri, timeout=10)
-        jwks_response.raise_for_status()
-        jwks = jwks_response.json()
-
-    except Exception:
-        raise HTTPException(
-            status_code=503,
-            detail="Unable to retrieve Microsoft Entra signing keys"
-        )
-
-    try:
-        unverified_header = jose_jwt.get_unverified_header(access_token)
-
-    except Exception:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid Microsoft Entra access token"
-        )
-
-    kid = unverified_header.get("kid")
-
-    if not kid:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid Entra token header"
-        )
-
-    signing_key = None
-
-    for key in jwks.get("keys", []):
-        if key.get("kid") == kid:
-            signing_key = key
-            break
-
-    if not signing_key:
-        raise HTTPException(
-            status_code=401,
-            detail="Microsoft Entra signing key not found"
-        )
-
-    issuer = f"https://login.microsoftonline.com/{tenant_id}/v2.0"
-
-    try:
-        claims = jose_jwt.decode(
-            access_token,
-            signing_key,
-            algorithms=["RS256"],
-            audience=client_id,
-            issuer=issuer
-        )
-
-    except Exception:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired Microsoft Entra access token"
-        )
-
-    return claims
+    return str(user_id)
